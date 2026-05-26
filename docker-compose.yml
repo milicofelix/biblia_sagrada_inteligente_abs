@@ -1,0 +1,58 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: biblia_abs_app
+    working_dir: /var/www/html
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - redis
+    networks:
+      - biblia_abs
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: biblia_abs_nginx
+    ports:
+      - "8086:80"
+    volumes:
+      - .:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app
+    networks:
+      - biblia_abs
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: biblia_abs_redis
+    ports:
+      - "6380:6379"
+    networks:
+      - biblia_abs
+
+  vite:
+    image: node:20-alpine
+    container_name: biblia_abs_vite
+    working_dir: /var/www/html
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    ports:
+      - "5176:5173"
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - app
+    networks:
+      - biblia_abs
+
+volumes:
+  biblia_abs_mysql_data:
+
+networks:
+  biblia_abs:
+    external: true
+    name: shared_net
