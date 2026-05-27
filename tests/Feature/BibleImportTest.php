@@ -82,6 +82,27 @@ class BibleImportTest extends TestCase
         ]);
     }
 
+    public function test_import_command_accepts_usfx_xml_payloads(): void
+    {
+        $this->seed(BibleCatalogSeeder::class);
+
+        $this
+            ->artisan('bible:import', [
+                'path' => 'tests/Fixtures/bible/sample-usfx.xml',
+                '--name' => 'Joao Ferreira de Almeida',
+                '--abbr' => 'JFA',
+            ])
+            ->assertSuccessful();
+
+        $this->assertDatabaseHas('bible_translations', [
+            'abbreviation' => 'JFA',
+        ]);
+        $this->assertDatabaseHas('bible_verses', [
+            'reference' => 'Joao 3:16',
+            'text' => 'Porque Deus amou o mundo de tal maneira.',
+        ]);
+    }
+
     public function test_search_page_returns_imported_verses(): void
     {
         $this->seed(BibleCatalogSeeder::class);

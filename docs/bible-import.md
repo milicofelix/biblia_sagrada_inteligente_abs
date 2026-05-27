@@ -1,6 +1,6 @@
 # Importacao Biblica
 
-Use o comando abaixo para carregar uma traducao em JSON:
+Use o comando abaixo para carregar uma traducao em JSON ou XML USFX:
 
 ```bash
 docker exec biblia_abs_app php artisan db:seed --class=Database\\Seeders\\Bible\\BibleCatalogSeeder
@@ -40,13 +40,29 @@ Formato esperado:
 }
 ```
 
-O importador faz `updateOrCreate` por traducao, livro, capitulo e versiculo. Pode executar novamente o mesmo arquivo sem duplicar versiculos.
+Para a base inicial do projeto foi usada a traducao Joao Ferreira de Almeida em dominio publico do repositorio `seven1m/open-bibles`:
+
+```bash
+mkdir -p storage/app/bibles
+curl -L https://raw.githubusercontent.com/seven1m/open-bibles/master/por-almeida.usfx.xml \
+  -o storage/app/bibles/por-almeida.usfx.xml
+
+docker exec biblia_abs_app php artisan bible:import storage/app/bibles/por-almeida.usfx.xml \
+  --name="Joao Ferreira de Almeida" \
+  --abbr=JFA \
+  --language=pt-BR \
+  --source="https://github.com/seven1m/open-bibles/blob/master/por-almeida.usfx.xml" \
+  --default
+```
+
+O importador faz `updateOrCreate`/`upsert` por traducao, livro, capitulo e versiculo. Pode executar novamente o mesmo arquivo sem duplicar versiculos.
 
 Formatos aceitos:
 
 - objeto com `translation` e `verses`
 - lista direta de versiculos
 - objeto com `translation` e `books`, contendo capitulos e versiculos aninhados
+- XML USFX com livros, capitulos e versiculos
 
 Campos equivalentes aceitos nos versiculos:
 
