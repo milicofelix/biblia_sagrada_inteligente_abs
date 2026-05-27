@@ -1,0 +1,29 @@
+{
+    "translation": {
+        "name": "Traducao de Teste",
+        "abbreviation": "TST",
+        "language": "pt-BR",
+        "source": "fixture",
+        "is_default": true
+    },
+    "verses": [
+        {
+            "book": "Joao",
+            "chapter": 3,
+            "verse": 16,
+            "text": "Porque Deus amou o mundo de tal maneira que deu o seu Filho unigenito."
+        },
+        {
+            "book": "Romanos",
+            "chapter": 5,
+            "verse": 3,
+            "text": "A tribulacao produz perseveranca."
+        },
+        {
+            "book": "Romanos",
+            "chapter": 5,
+            "verse": 4,
+            "text": "E a perseveranca produz experiencia, e a experiencia produz esperanca."
+        }
+    ]
+}
