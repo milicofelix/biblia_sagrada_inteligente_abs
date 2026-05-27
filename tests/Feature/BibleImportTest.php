@@ -43,6 +43,45 @@ class BibleImportTest extends TestCase
         ]);
     }
 
+    public function test_import_command_accepts_flat_verse_lists_with_translation_options(): void
+    {
+        $this->seed(BibleCatalogSeeder::class);
+
+        $this
+            ->artisan('bible:import', [
+                'path' => 'tests/Fixtures/bible/flat-verses.json',
+                '--name' => 'Lista Plana',
+                '--abbr' => 'FLT',
+            ])
+            ->assertSuccessful();
+
+        $this->assertDatabaseHas('bible_translations', [
+            'name' => 'Lista Plana',
+            'abbreviation' => 'FLT',
+        ]);
+        $this->assertDatabaseHas('bible_verses', [
+            'reference' => 'Tiago 1:3',
+            'text' => 'Sabendo que a prova da vossa fe opera a paciencia.',
+        ]);
+    }
+
+    public function test_import_command_accepts_nested_book_payloads(): void
+    {
+        $this->seed(BibleCatalogSeeder::class);
+
+        $this
+            ->artisan('bible:import', ['path' => 'tests/Fixtures/bible/nested-books.json'])
+            ->assertSuccessful();
+
+        $this->assertDatabaseHas('bible_translations', [
+            'abbreviation' => 'NST',
+        ]);
+        $this->assertDatabaseHas('bible_verses', [
+            'reference' => 'Salmos 23:1',
+            'text' => 'O Senhor e o meu pastor, nada me faltara.',
+        ]);
+    }
+
     public function test_search_page_returns_imported_verses(): void
     {
         $this->seed(BibleCatalogSeeder::class);

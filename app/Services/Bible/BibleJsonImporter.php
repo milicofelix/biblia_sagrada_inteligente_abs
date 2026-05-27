@@ -14,7 +14,7 @@ use InvalidArgumentException;
 
 class BibleJsonImporter
 {
-    public function import(string $path): BibleImportResult
+    public function import(string $path, array $translationOverrides = []): BibleImportResult
     {
         if (! is_file($path)) {
             throw new InvalidArgumentException("Arquivo nao encontrado: {$path}");
@@ -26,6 +26,7 @@ class BibleJsonImporter
             throw new InvalidArgumentException('O arquivo informado nao contem um JSON valido.');
         }
 
+        $payload = $this->normalizePayload($payload, $translationOverrides);
         $this->validate($payload);
 
         return DB::transaction(function () use ($payload): BibleImportResult {
@@ -68,6 +69,101 @@ class BibleJsonImporter
                 verses: $versesImported,
             );
         });
+    }
+
+    private function normalizePayload(array $payload, array $translationOverrides): array
+    {
+        $translation = array_filter([
+            'name' => $translationOverrides['name'] ?? null,
+            'abbreviation' => $translationOverrides['abbreviation'] ?? null,
+            'language' => $translationOverrides['language'] ?? null,
+            'source' => $translationOverrides['source'] ?? null,
+            'copyright' => $translationOverrides['copyright'] ?? null,
+            'is_default' => $translationOverrides['is_default'] ?? null,
+        ], fn ($value): bool => $value !== null);
+
+        if (isset($payload['translation']) && is_array($payload['translation'])) {
+            $translation = [
+                ...$payload['translation'],
+                ...$translation,
+            ];
+        }
+
+        if (isset($payload['verses']) && is_array($payload['verses'])) {
+            return [
+                'translation' => $translation,
+                'verses' => $this->normalizeFlatVerses($payload['verses']),
+            ];
+        }
+
+        if (isset($payload['books']) && is_array($payload['books'])) {
+            return [
+                'translation' => $translation,
+                'verses' => $this->normalizeBooks($payload['books']),
+            ];
+        }
+
+        if (array_is_list($payload)) {
+            return [
+                'translation' => $translation,
+                'verses' => $this->normalizeFlatVerses($payload),
+            ];
+        }
+
+        throw new InvalidArgumentException('Formato JSON nao reconhecido. Use "verses", "books" ou uma lista de versiculos.');
+    }
+
+    private function normalizeFlatVerses(array $verses): array
+    {
+        return array_map(function (array $verse): array {
+            return [
+                'book' => $verse['book'] ?? $verse['book_name'] ?? $verse['bookName'] ?? $verse['livro'] ?? $verse['abbrev'] ?? null,
+                'chapter' => $verse['chapter'] ?? $verse['chapter_number'] ?? $verse['chapterNumber'] ?? $verse['capitulo'] ?? null,
+                'verse' => $verse['verse'] ?? $verse['verse_number'] ?? $verse['verseNumber'] ?? $verse['versiculo'] ?? null,
+                'text' => $verse['text'] ?? $verse['content'] ?? $verse['texto'] ?? null,
+            ];
+        }, $verses);
+    }
+
+    private function normalizeBooks(array $books): array
+    {
+        $verses = [];
+
+        foreach ($books as $book) {
+            $bookName = $book['name'] ?? $book['book'] ?? $book['livro'] ?? $book['abbrev'] ?? null;
+            $chapters = $book['chapters'] ?? $book['capitulos'] ?? [];
+
+            foreach ($chapters as $chapterIndex => $chapter) {
+                $chapterNumber = $chapter['number'] ?? $chapter['chapter'] ?? $chapter['capitulo'] ?? ($chapterIndex + 1);
+                $chapterVerses = $chapter['verses'] ?? $chapter['versiculos'] ?? $chapter;
+
+                foreach ($chapterVerses as $verseIndex => $verse) {
+                    if (is_string($verse)) {
+                        $verses[] = [
+                            'book' => $bookName,
+                            'chapter' => $chapterNumber,
+                            'verse' => $verseIndex + 1,
+                            'text' => $verse,
+                        ];
+
+                        continue;
+                    }
+
+                    if (! is_array($verse)) {
+                        continue;
+                    }
+
+                    $verses[] = [
+                        'book' => $bookName,
+                        'chapter' => $chapterNumber,
+                        'verse' => $verse['number'] ?? $verse['verse'] ?? $verse['versiculo'] ?? ($verseIndex + 1),
+                        'text' => $verse['text'] ?? $verse['content'] ?? $verse['texto'] ?? null,
+                    ];
+                }
+            }
+        }
+
+        return $verses;
     }
 
     private function validate(array $payload): void

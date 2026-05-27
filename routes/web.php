@@ -1,7 +1,11 @@
 <?php
 
+use App\Http\Controllers\Ai\AnswerQuestionController;
+use App\Http\Controllers\Ai\ShowAnswerController;
 use App\Http\Controllers\Bible\SearchController;
+use App\Http\Resources\AiAnswerResource;
 use App\Models\Bible\AgentRun;
+use App\Models\Bible\AiAnswer;
 use App\Models\Bible\Book;
 use App\Models\Bible\StudyNote;
 use App\Models\Bible\Verse;
@@ -17,8 +21,21 @@ Route::get('/', function () {
             'notes' => StudyNote::query()->count(),
             'agentRuns' => AgentRun::query()->count(),
         ],
+        'recentAnswers' => AiAnswerResource::collection(
+            AiAnswer::query()
+                ->with(['question', 'agentRuns'])
+                ->latest()
+                ->limit(6)
+                ->get()
+        )->resolve(),
     ]);
 })->name('dashboard');
 
 Route::get('/buscar', [SearchController::class, '__invoke'])
     ->name('bible.search');
+
+Route::post('/ai/responder', AnswerQuestionController::class)
+    ->name('ai.answer');
+
+Route::get('/ai/respostas/{answer}', ShowAnswerController::class)
+    ->name('ai.answer.show');

@@ -3,12 +3,13 @@ import {
     BookOpen,
     Brain,
     CalendarDays,
-    ChevronRight,
+    Clock3,
     GitBranch,
     Library,
     ListChecks,
     MessageSquareText,
     NotebookPen,
+    Send,
     Search,
     Sparkles,
 } from 'lucide-react';
@@ -39,18 +40,38 @@ const agents = [
         description: 'Posiciona eventos na narrativa biblica de forma progressiva.',
         status: 'Preparado',
     },
+    {
+        name: 'Estudos',
+        icon: NotebookPen,
+        description: 'Gera resumos, flashcards, quiz e planos curtos de leitura.',
+        status: 'Preparado',
+    },
 ];
 
 const tabs = [
-    { name: 'IA Explica', icon: Brain },
-    { name: 'Contexto', icon: BookOpen },
-    { name: 'Referencias', icon: GitBranch },
-    { name: 'Notas', icon: NotebookPen },
+    { name: 'IA Explica', icon: Brain, agent: 'theologian' },
+    { name: 'Contexto', icon: BookOpen, agent: 'theologian' },
+    { name: 'Referencias', icon: GitBranch, agent: 'biblical_connections' },
+    { name: 'Aplicacao', icon: ListChecks, agent: 'practical_application' },
+    { name: 'Cronologia', icon: CalendarDays, agent: 'chronology' },
+    { name: 'Estudos', icon: NotebookPen, agent: 'study' },
 ];
 
-export default function Dashboard({ initialReference = 'Joao 3:16', search = { term: '', results: [] }, stats = {} }) {
+export default function Dashboard({
+    initialReference = 'Joao 3:16',
+    search = { term: '', results: [] },
+    stats = {},
+    recentAnswers = [],
+}) {
     const [reference, setReference] = useState(initialReference);
     const [activeTab, setActiveTab] = useState(tabs[0].name);
+    const [aiQuestion, setAiQuestion] = useState('Estou desanimado, existe algo na Biblia sobre perseveranca?');
+    const [aiAnswer, setAiAnswer] = useState(null);
+    const [answerHistory, setAnswerHistory] = useState(recentAnswers);
+    const [aiError, setAiError] = useState('');
+    const [aiLoading, setAiLoading] = useState(false);
+    const [loadingStep, setLoadingStep] = useState('Preparando o estudo');
+    const activeSection = aiAnswer?.sections?.find((section) => section.agent === tabs.find((tab) => tab.name === activeTab)?.agent);
 
     function submit(event) {
         event.preventDefault();
@@ -60,6 +81,105 @@ export default function Dashboard({ initialReference = 'Joao 3:16', search = { t
             preserveState: true,
             only: [],
         });
+    }
+
+    async function askAgents(event) {
+        event.preventDefault();
+
+        const question = aiQuestion.trim();
+
+        if (!question) {
+            setAiError('Digite uma pergunta para consultar os agentes.');
+            return;
+        }
+
+        setAiLoading(true);
+        setLoadingStep('Enfileirando os agentes');
+        setAiError('');
+        setAiAnswer(null);
+
+        const response = await fetch('/ai/responder', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+                Accept: 'application/json',
+            },
+            body: JSON.stringify({ question }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        setAiLoading(false);
+
+        if (!response.ok) {
+            setAiError(data.message ?? 'Nao foi possivel consultar os agentes agora.');
+            setAiLoading(false);
+            return;
+        }
+
+        setAiAnswer(data.answer);
+        setAnswerHistory((current) => [
+            data.answer,
+            ...current.filter((answer) => answer.id !== data.answer.id),
+        ].slice(0, 6));
+        setActiveTab(tabs[0].name);
+
+        if (['queued', 'running'].includes(data.answer.status)) {
+            pollAnswer(data.answer.id);
+            return;
+        }
+
+        setAiLoading(false);
+    }
+
+    function openAnswer(answer) {
+        if (aiLoading) {
+            return;
+        }
+
+        setAiAnswer(answer);
+        setAiQuestion(answer.question ?? aiQuestion);
+        setAiError('');
+        setActiveTab(tabs[0].name);
+    }
+
+    function pollAnswer(answerId, attempt = 0) {
+        window.setTimeout(async () => {
+            setLoadingStep(attempt % 2 === 0 ? 'Lendo contexto e conexoes' : 'Organizando a resposta dos agentes');
+
+            const response = await fetch(`/ai/respostas/${answerId}`, {
+                headers: { Accept: 'application/json' },
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok || !data.answer) {
+                setAiError('Nao foi possivel acompanhar este estudo agora. Recarregue a pagina em alguns instantes.');
+                setAiLoading(false);
+                return;
+            }
+
+            setAiAnswer(data.answer);
+            setAnswerHistory((current) => [
+                data.answer,
+                ...current.filter((answer) => answer.id !== data.answer.id),
+            ].slice(0, 6));
+
+            if (['completed', 'completed_with_errors'].includes(data.answer.status)) {
+                setLoadingStep('Estudo concluido');
+                setAiLoading(false);
+                return;
+            }
+
+            if (data.answer.status === 'failed') {
+                setAiError(data.answer.error ?? 'Nao foi possivel consultar os agentes agora.');
+                setAiLoading(false);
+                return;
+            }
+
+            pollAnswer(answerId, attempt + 1);
+        }, attempt < 2 ? 1800 : 3000);
     }
 
     return (
@@ -171,15 +291,28 @@ export default function Dashboard({ initialReference = 'Joao 3:16', search = { t
                             </div>
 
                             <div className="grid gap-4 px-5 py-5 md:grid-cols-2">
-                                <StudyPanel title={activeTab} />
+                                <StudyPanel title={activeTab} section={activeSection} answer={aiAnswer} loading={aiLoading} loadingStep={loadingStep} />
                                 <div className="rounded-md border border-[#e4e2da] bg-[#fafaf7] p-4">
                                     <div className="flex items-center gap-2 text-sm font-semibold text-[#111827]">
                                         <Sparkles className="h-4 w-4 text-[#2563eb]" />
-                                        Proxima acao
+                                        Estado dos agentes
                                     </div>
-                                    <p className="mt-3 text-sm leading-6 text-[#4b5563]">
-                                        Conectar o pipeline de busca aos versiculos e depois despachar analises para a fila.
-                                    </p>
+                                    {aiAnswer?.agents?.length > 0 ? (
+                                        <div className="mt-3 space-y-2">
+                                            {aiAnswer.agents.map((agent) => (
+                                                <div key={agent.agent} className="flex items-center justify-between gap-3 text-sm">
+                                                    <span className="truncate text-[#4b5563]">{agent.title}</span>
+                                                    <span className={`rounded-md px-2 py-0.5 text-xs font-semibold ${agent.status === 'failed' ? 'bg-[#fef2f2] text-[#b91c1c]' : 'bg-[#ecfdf5] text-[#047857]'}`}>
+                                                        {agent.status}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="mt-3 text-sm leading-6 text-[#4b5563]">
+                                            Faca uma pergunta para gerar contexto, conexoes, aplicacao, cronologia e estudo.
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -214,24 +347,77 @@ export default function Dashboard({ initialReference = 'Joao 3:16', search = { t
                             </div>
                         </div>
 
-                        <div className="rounded-md border border-[#d8d7cf] bg-[#111827] p-4 text-white">
+                        <form onSubmit={askAgents} className="rounded-md border border-[#d8d7cf] bg-[#111827] p-4 text-white">
                             <div className="flex items-center gap-2 text-sm font-semibold">
                                 <MessageSquareText className="h-4 w-4 text-[#93c5fd]" />
-                                Pergunta exemplo
+                                Perguntar aos agentes
                             </div>
-                            <p className="mt-3 text-sm leading-6 text-[#d1d5db]">
-                                Estou desanimado, existe algo na Biblia sobre perseveranca?
-                            </p>
-                            <button className="mt-4 inline-flex h-9 items-center rounded-md bg-white px-3 text-sm font-semibold text-[#111827]">
-                                Usar exemplo
-                                <ChevronRight className="ml-2 h-4 w-4" />
+                            <textarea
+                                value={aiQuestion}
+                                onChange={(event) => setAiQuestion(event.target.value)}
+                                disabled={aiLoading}
+                                rows="5"
+                                className="mt-3 w-full resize-none rounded-md border border-[#374151] bg-[#1f2937] px-3 py-2 text-sm leading-6 text-white outline-none transition placeholder:text-[#9ca3af] focus:border-[#93c5fd] focus:ring-2 focus:ring-[#1d4ed8] disabled:opacity-70"
+                            />
+                            {aiLoading && <BibleLoader label={loadingStep} compact />}
+                            {aiError && (
+                                <p className="mt-3 rounded-md bg-[#7f1d1d] px-3 py-2 text-sm leading-5 text-[#fee2e2]">{aiError}</p>
+                            )}
+                            <button
+                                type="submit"
+                                disabled={aiLoading}
+                                className="mt-4 inline-flex h-9 items-center rounded-md bg-white px-3 text-sm font-semibold text-[#111827] transition hover:bg-[#f3f4f6] disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                                {aiLoading ? 'Estudo em andamento' : 'Perguntar'}
+                                {aiLoading ? <BookOpen className="ml-2 h-4 w-4 animate-pulse" /> : <Send className="ml-2 h-4 w-4" />}
                             </button>
+                        </form>
+
+                        <div className="rounded-md border border-[#d8d7cf] bg-white">
+                            <div className="flex items-center gap-2 border-b border-[#e4e2da] px-4 py-3">
+                                <Clock3 className="h-4 w-4 text-[#2563eb]" />
+                                <h2 className="text-base font-semibold text-[#111827]">Historico</h2>
+                            </div>
+                            {answerHistory.length > 0 ? (
+                                <div className="divide-y divide-[#ecebe4]">
+                                    {answerHistory.map((answer) => (
+                                        <button
+                                            key={answer.id}
+                                            type="button"
+                                            onClick={() => openAnswer(answer)}
+                                            className="block w-full px-4 py-3 text-left transition hover:bg-[#f9fafb]"
+                                        >
+                                            <span className="line-clamp-2 text-sm font-medium leading-5 text-[#111827]">
+                                                {answer.question}
+                                            </span>
+                                            <span className="mt-1 block text-xs text-[#6b7280]">
+                                                {formatDate(answer.createdAt)} · {answer.sections?.length ?? 0} secoes
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="px-4 py-4 text-sm leading-6 text-[#6b7280]">
+                                    Os estudos gerados aparecerao aqui.
+                                </p>
+                            )}
                         </div>
                     </aside>
                 </section>
             </main>
         </>
     );
+}
+
+function formatDate(value) {
+    if (!value) {
+        return 'Agora';
+    }
+
+    return new Intl.DateTimeFormat('pt-BR', {
+        dateStyle: 'short',
+        timeStyle: 'short',
+    }).format(new Date(value));
 }
 
 function Metric({ label, value }) {
@@ -243,13 +429,80 @@ function Metric({ label, value }) {
     );
 }
 
-function StudyPanel({ title }) {
+function StudyPanel({ title, section, answer, loading, loadingStep }) {
+    if (loading && ['queued', 'running'].includes(answer?.status)) {
+        return (
+            <div className="rounded-md border border-[#e4e2da] p-4">
+                <h3 className="text-sm font-semibold text-[#111827]">{title}</h3>
+                <BibleLoader label={loadingStep} />
+            </div>
+        );
+    }
+
+    if (section?.text) {
+        return (
+            <div className="rounded-md border border-[#e4e2da] p-4">
+                <h3 className="text-sm font-semibold text-[#111827]">{title}</h3>
+                {section.status === 'failed' && (
+                    <p className="mt-3 rounded-md bg-[#fef2f2] px-3 py-2 text-sm leading-5 text-[#b91c1c]">
+                        Esta secao falhou nesta tentativa, mas o restante do estudo foi preservado.
+                    </p>
+                )}
+                <div className="mt-3 max-h-[420px] space-y-3 overflow-auto pr-2 text-sm leading-6 text-[#374151]">
+                    {section.text.split('\n').filter(Boolean).map((line, index) => (
+                        <p key={`${line}-${index}`}>{line.replace(/^#+\s*/, '')}</p>
+                    ))}
+                </div>
+                {answer.citations?.length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                        {answer.citations.map((citation) => (
+                            <span key={`${citation.reference}-${citation.translation}`} className="rounded-md bg-[#eef2ff] px-2 py-1 text-xs font-semibold text-[#3730a3]">
+                                {citation.reference}
+                            </span>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    if (answer?.sections?.length > 0) {
+        return (
+            <div className="rounded-md border border-[#e4e2da] p-4">
+                <h3 className="text-sm font-semibold text-[#111827]">{title}</h3>
+                <p className="mt-3 text-sm leading-6 text-[#4b5563]">
+                    Este agente ainda nao retornou conteudo para esta pergunta.
+                </p>
+            </div>
+        );
+    }
+
     return (
         <div className="rounded-md border border-[#e4e2da] p-4">
             <h3 className="text-sm font-semibold text-[#111827]">{title}</h3>
             <p className="mt-3 text-sm leading-6 text-[#4b5563]">
                 Este espaco recebera respostas fundamentadas, contexto historico, referencias cruzadas e aplicacoes praticas.
             </p>
+        </div>
+    );
+}
+
+function BibleLoader({ label, compact = false }) {
+    return (
+        <div className={`${compact ? 'mt-3' : 'mt-4'} rounded-md border border-[#dbeafe] bg-[#eff6ff] p-4`}>
+            <div className="flex items-center gap-3">
+                <div className="relative flex h-10 w-12 items-center justify-center">
+                    <div className="absolute h-8 w-5 origin-right animate-pulse rounded-l-md border border-[#2563eb] bg-white" />
+                    <div className="absolute h-8 w-5 translate-x-4 origin-left animate-pulse rounded-r-md border border-[#2563eb] bg-white" />
+                    <BookOpen className="relative h-5 w-5 text-[#2563eb]" />
+                </div>
+                <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[#1e3a8a]">{label}</p>
+                    <div className="mt-2 h-1.5 w-40 overflow-hidden rounded-full bg-[#bfdbfe]">
+                        <div className="h-full w-1/2 animate-[pulse_1.2s_ease-in-out_infinite] rounded-full bg-[#2563eb]" />
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }

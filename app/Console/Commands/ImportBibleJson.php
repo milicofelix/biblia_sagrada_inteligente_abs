@@ -8,7 +8,13 @@ use InvalidArgumentException;
 
 class ImportBibleJson extends Command
 {
-    protected $signature = 'bible:import {path : Caminho para o arquivo JSON da traducao}';
+    protected $signature = 'bible:import
+        {path : Caminho para o arquivo JSON da traducao}
+        {--name= : Nome da traducao quando o JSON nao trouxer metadados}
+        {--abbr= : Abreviacao da traducao quando o JSON nao trouxer metadados}
+        {--language=pt-BR : Idioma da traducao}
+        {--source= : Origem do arquivo importado}
+        {--default : Marca a traducao como padrao}';
 
     protected $description = 'Importa uma traducao biblica em JSON para a base FULLTEXT inicial.';
 
@@ -18,7 +24,13 @@ class ImportBibleJson extends Command
         $path = str_starts_with($path, '/') ? $path : base_path($path);
 
         try {
-            $result = $importer->import($path);
+            $result = $importer->import($path, [
+                'name' => $this->option('name'),
+                'abbreviation' => $this->option('abbr'),
+                'language' => $this->option('language'),
+                'source' => $this->option('source'),
+                'is_default' => $this->option('default') ?: null,
+            ]);
         } catch (InvalidArgumentException $exception) {
             $this->error($exception->getMessage());
 
