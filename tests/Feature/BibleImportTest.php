@@ -95,4 +95,35 @@ class BibleImportTest extends TestCase
                 ->where('search.term', 'perseveranca')
                 ->has('search.results', 2));
     }
+
+    public function test_search_page_resolves_exact_references_before_fulltext(): void
+    {
+        $this->seed(BibleCatalogSeeder::class);
+        $this->artisan('bible:import', ['path' => 'tests/Fixtures/bible/sample-translation.json']);
+
+        $this
+            ->get('/buscar?q=Joao%203%3A16')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Dashboard')
+                ->where('search.term', 'Joao 3:16')
+                ->has('search.results', 1)
+                ->where('search.results.0.reference', 'Joao 3:16'));
+    }
+
+    public function test_search_page_resolves_reference_ranges(): void
+    {
+        $this->seed(BibleCatalogSeeder::class);
+        $this->artisan('bible:import', ['path' => 'tests/Fixtures/bible/sample-translation.json']);
+
+        $this
+            ->get('/buscar?q=Romanos%205%3A3-4')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Dashboard')
+                ->where('search.term', 'Romanos 5:3-4')
+                ->has('search.results', 2)
+                ->where('search.results.0.reference', 'Romanos 5:3')
+                ->where('search.results.1.reference', 'Romanos 5:4'));
+    }
 }

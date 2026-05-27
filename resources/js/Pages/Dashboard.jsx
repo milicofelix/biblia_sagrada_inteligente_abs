@@ -302,9 +302,7 @@ export default function Dashboard({
                                             {aiAnswer.agents.map((agent) => (
                                                 <div key={agent.agent} className="flex items-center justify-between gap-3 text-sm">
                                                     <span className="truncate text-[#4b5563]">{agent.title}</span>
-                                                    <span className={`rounded-md px-2 py-0.5 text-xs font-semibold ${agent.status === 'failed' ? 'bg-[#fef2f2] text-[#b91c1c]' : 'bg-[#ecfdf5] text-[#047857]'}`}>
-                                                        {agent.status}
-                                                    </span>
+                                                    <AgentStatus status={agent.status} />
                                                 </div>
                                             ))}
                                         </div>
@@ -504,5 +502,56 @@ function BibleLoader({ label, compact = false }) {
                 </div>
             </div>
         </div>
+    );
+}
+
+function AgentStatus({ status }) {
+    if (status === 'running') {
+        return (
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-[#eff6ff] px-2 py-0.5 text-xs font-semibold text-[#1d4ed8]">
+                <MiniBibleLoader />
+                Analisando
+            </span>
+        );
+    }
+
+    const statusMap = {
+        completed: {
+            label: 'Concluido',
+            className: 'bg-[#ecfdf5] text-[#047857]',
+        },
+        failed: {
+            label: 'Falhou',
+            className: 'bg-[#fef2f2] text-[#b91c1c]',
+        },
+        queued: {
+            label: 'Na fila',
+            className: 'bg-[#fefce8] text-[#a16207]',
+        },
+        pending: {
+            label: 'Pendente',
+            className: 'bg-[#f3f4f6] text-[#4b5563]',
+        },
+    };
+
+    const current = statusMap[status] ?? {
+        label: status,
+        className: 'bg-[#f3f4f6] text-[#4b5563]',
+    };
+
+    return (
+        <span className={`rounded-md px-2 py-0.5 text-xs font-semibold ${current.className}`}>
+            {current.label}
+        </span>
+    );
+}
+
+function MiniBibleLoader() {
+    return (
+        <span className="relative inline-flex h-4 w-5 items-center justify-center">
+            <span className="absolute h-3.5 w-2 origin-right animate-pulse rounded-l-sm border border-[#2563eb] bg-white" />
+            <span className="absolute h-3.5 w-2 translate-x-1.5 origin-left animate-pulse rounded-r-sm border border-[#2563eb] bg-white" />
+            <BookOpen className="relative h-3 w-3 text-[#2563eb]" />
+        </span>
     );
 }
