@@ -9,12 +9,16 @@ import {
     ListChecks,
     MessageSquareText,
     NotebookPen,
+    Pause,
+    Play,
     Save,
     Send,
     Search,
     Sparkles,
+    Square,
+    Volume2,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 const agents = [
     {
@@ -282,6 +286,7 @@ export default function Dashboard({
                             <div className="px-5 py-6">
                                 {search.results?.length > 0 ? (
                                     <div className="space-y-4">
+                                        <BibleAudioReader results={search.results} />
                                         {search.results.map((result) => (
                                             <VerseResult key={result.id} result={result} onSaveNote={saveStudyNote} />
                                         ))}
@@ -487,6 +492,241 @@ function Metric({ label, value }) {
         <div className="rounded-md border border-[#d8d7cf] bg-white px-4 py-3">
             <p className="text-sm text-[#6b7280]">{label}</p>
             <p className="mt-1 text-2xl font-semibold text-[#111827]">{value}</p>
+        </div>
+    );
+}
+
+
+function BibleAudioReader({ results = [] }) {
+    const synthRef = useRef(null);
+    const stopRequestedRef = useRef(false);
+    const currentIndexRef = useRef(0);
+    const resultsRef = useRef(results);
+    const [supported, setSupported] = useState(null);
+    const [voices, setVoices] = useState([]);
+    const [selectedVoiceURI, setSelectedVoiceURI] = useState('');
+    const [rate, setRate] = useState(1);
+    const [status, setStatus] = useState('idle');
+    const [currentIndex, setCurrentIndex] = useState(null);
+
+    const readableResults = useMemo(() => results.filter((result) => result?.text), [results]);
+    const currentReference = currentIndex !== null ? readableResults[currentIndex]?.reference : null;
+
+    useEffect(() => {
+        resultsRef.current = readableResults;
+    }, [readableResults]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || !('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) {
+            setSupported(false);
+            return undefined;
+        }
+
+        synthRef.current = window.speechSynthesis;
+        setSupported(true);
+
+        function loadVoices() {
+            const availableVoices = synthRef.current?.getVoices() ?? [];
+            setVoices(availableVoices);
+
+            if (availableVoices.length > 0) {
+                const preferredVoice = availableVoices.find((voice) => voice.lang === 'pt-BR')
+                    ?? availableVoices.find((voice) => voice.lang?.startsWith('pt'))
+                    ?? availableVoices[0];
+
+                setSelectedVoiceURI((current) => current || preferredVoice.voiceURI);
+            }
+        }
+
+        loadVoices();
+        synthRef.current.onvoiceschanged = loadVoices;
+
+        return () => {
+            stopRequestedRef.current = true;
+            synthRef.current?.cancel();
+            if (synthRef.current) {
+                synthRef.current.onvoiceschanged = null;
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        stopAudio();
+    }, [readableResults.length]);
+
+    function getSelectedVoice() {
+        return voices.find((voice) => voice.voiceURI === selectedVoiceURI) ?? null;
+    }
+
+    function speakAt(index) {
+        const synth = synthRef.current;
+        const current = resultsRef.current[index];
+
+        if (!synth || !current) {
+            setStatus('idle');
+            setCurrentIndex(null);
+            return;
+        }
+
+        currentIndexRef.current = index;
+        setCurrentIndex(index);
+        setStatus('playing');
+
+        const utterance = new SpeechSynthesisUtterance(`${current.reference}. ${current.text}`);
+        utterance.lang = getSelectedVoice()?.lang ?? 'pt-BR';
+        utterance.voice = getSelectedVoice();
+        utterance.rate = Number(rate);
+        utterance.pitch = 1;
+
+        utterance.onend = () => {
+            if (stopRequestedRef.current) {
+                return;
+            }
+
+            const nextIndex = currentIndexRef.current + 1;
+
+            if (nextIndex < resultsRef.current.length) {
+                speakAt(nextIndex);
+                return;
+            }
+
+            setStatus('done');
+            setCurrentIndex(null);
+        };
+
+        utterance.onerror = () => {
+            setStatus('idle');
+            setCurrentIndex(null);
+        };
+
+        synth.speak(utterance);
+    }
+
+    function startAudio() {
+        if (!supported || readableResults.length === 0) {
+            return;
+        }
+
+        stopRequestedRef.current = false;
+        synthRef.current?.cancel();
+        speakAt(0);
+    }
+
+    function pauseAudio() {
+        synthRef.current?.pause();
+        setStatus('paused');
+    }
+
+    function resumeAudio() {
+        synthRef.current?.resume();
+        setStatus('playing');
+    }
+
+    function stopAudio() {
+        stopRequestedRef.current = true;
+        synthRef.current?.cancel();
+        setStatus('idle');
+        setCurrentIndex(null);
+    }
+
+    if (supported === null) {
+        return null;
+    }
+
+    if (!supported) {
+        return (
+            <div className="rounded-md border border-[#fee2e2] bg-[#fef2f2] p-4 text-sm leading-6 text-[#991b1b]">
+                Este navegador nao disponibilizou leitura por voz nativa. Tente Chrome, Edge ou Safari atualizado.
+            </div>
+        );
+    }
+
+    return (
+        <div className="rounded-md border border-[#dbeafe] bg-[#eff6ff] p-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <div className="flex items-center gap-2 text-sm font-semibold text-[#1e3a8a]">
+                        <Volume2 className="h-4 w-4" />
+                        Leitor com audio do navegador
+                    </div>
+                    <p className="mt-1 text-sm leading-6 text-[#1e40af]">
+                        {status === 'playing' && currentReference
+                            ? `Lendo agora: ${currentReference}`
+                            : 'Use para ouvir os versiculos encontrados sem depender de API paga.'}
+                    </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={startAudio}
+                        disabled={status === 'playing' || readableResults.length === 0}
+                        className="inline-flex h-9 items-center rounded-md bg-[#2563eb] px-3 text-sm font-semibold text-white transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        <Play className="mr-2 h-4 w-4" />
+                        Ouvir
+                    </button>
+                    {status === 'playing' ? (
+                        <button
+                            type="button"
+                            onClick={pauseAudio}
+                            className="inline-flex h-9 items-center rounded-md border border-[#93c5fd] bg-white px-3 text-sm font-semibold text-[#1d4ed8] transition hover:bg-[#dbeafe]"
+                        >
+                            <Pause className="mr-2 h-4 w-4" />
+                            Pausar
+                        </button>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={resumeAudio}
+                            disabled={status !== 'paused'}
+                            className="inline-flex h-9 items-center rounded-md border border-[#93c5fd] bg-white px-3 text-sm font-semibold text-[#1d4ed8] transition hover:bg-[#dbeafe] disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            <Play className="mr-2 h-4 w-4" />
+                            Continuar
+                        </button>
+                    )}
+                    <button
+                        type="button"
+                        onClick={stopAudio}
+                        disabled={!['playing', 'paused'].includes(status)}
+                        className="inline-flex h-9 items-center rounded-md border border-[#cbd5e1] bg-white px-3 text-sm font-semibold text-[#334155] transition hover:bg-[#f8fafc] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        <Square className="mr-2 h-4 w-4" />
+                        Parar
+                    </button>
+                </div>
+            </div>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_160px]">
+                <label className="text-xs font-semibold uppercase tracking-wide text-[#1e40af]">
+                    Voz
+                    <select
+                        value={selectedVoiceURI}
+                        onChange={(event) => setSelectedVoiceURI(event.target.value)}
+                        className="mt-1 h-10 w-full rounded-md border border-[#bfdbfe] bg-white px-3 text-sm normal-case tracking-normal text-[#111827] outline-none focus:border-[#2563eb] focus:ring-2 focus:ring-[#bfdbfe]"
+                    >
+                        {voices.map((voice) => (
+                            <option key={voice.voiceURI} value={voice.voiceURI}>
+                                {voice.name} ({voice.lang})
+                            </option>
+                        ))}
+                    </select>
+                </label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-[#1e40af]">
+                    Velocidade
+                    <select
+                        value={rate}
+                        onChange={(event) => setRate(Number(event.target.value))}
+                        className="mt-1 h-10 w-full rounded-md border border-[#bfdbfe] bg-white px-3 text-sm normal-case tracking-normal text-[#111827] outline-none focus:border-[#2563eb] focus:ring-2 focus:ring-[#bfdbfe]"
+                    >
+                        <option value={0.8}>0.8x</option>
+                        <option value={1}>1x</option>
+                        <option value={1.2}>1.2x</option>
+                        <option value={1.4}>1.4x</option>
+                    </select>
+                </label>
+            </div>
         </div>
     );
 }
