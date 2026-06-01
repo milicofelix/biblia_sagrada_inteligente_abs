@@ -16,7 +16,30 @@ export type VerseResultData = {
     book?: string | null;
     isFavorited?: boolean;
     crossReferences?: BibleCrossReference[];
+    timeline?: BiblicalTimeline | null;
     latestNote?: StudyNote | null;
+};
+
+export type BiblicalTimelinePhaseSummary = {
+    title: string;
+    period: string;
+};
+
+export type BiblicalTimeline = {
+    book: string;
+    testament: string;
+    chapter: number;
+    verse: number;
+    phase: {
+        key: string;
+        title: string;
+        period: string;
+        summary: string;
+        position: number;
+        total: number;
+    };
+    previousPhase?: BiblicalTimelinePhaseSummary | null;
+    nextPhase?: BiblicalTimelinePhaseSummary | null;
 };
 
 export type BibleCrossReference = {
@@ -116,7 +139,7 @@ export type DashboardProps = {
 export type NavigationItem = {
     label: string;
     icon: LucideIcon;
-    active: boolean;
+    disabled?: boolean;
 };
 
 export type AudioItem = {

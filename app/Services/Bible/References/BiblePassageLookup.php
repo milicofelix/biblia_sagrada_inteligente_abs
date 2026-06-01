@@ -39,7 +39,7 @@ class BiblePassageLookup
     private function queryReference(ParsedBibleReference $reference): Builder
     {
         return Verse::query()
-            ->with(['translation:id,abbreviation', 'book:id,name'])
+            ->with(['translation:id,abbreviation', 'book:id,name,testament,position'])
             ->where('book_id', $reference->book->id)
             ->where(function (Builder $query) use ($reference): void {
                 if ($reference->isChapterOnly()) {

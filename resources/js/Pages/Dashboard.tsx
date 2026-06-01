@@ -23,6 +23,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { FavoritesCard, HistoryCard, NotesCard, ReadingPlanCard } from '../Components/Dashboard/LibraryCards';
+import { ChronologyContext } from '../Components/Dashboard/ChronologyContext';
 import { DashboardSidebar } from '../Components/Dashboard/Sidebar';
 import { StudyTools } from '../Components/Dashboard/StudyTools';
 import { TopBar } from '../Components/Dashboard/TopBar';
@@ -90,6 +91,10 @@ export default function Dashboard({
     const [noteHistory, setNoteHistory] = useState(recentNotes);
     const [favoriteHistory, setFavoriteHistory] = useState(recentFavorites);
     const [readingPlan, setReadingPlan] = useState<ReadingPlan | null>(activeReadingPlan);
+    const [selectedVerseId, setSelectedVerseId] = useState<number | null>(null);
+    const [favoriteOverrides, setFavoriteOverrides] = useState<Record<number, boolean>>({});
+    const [activeNav, setActiveNav] = useState('Biblia');
+    const [copyStatus, setCopyStatus] = useState('');
     const [aiError, setAiError] = useState('');
     const [aiLoading, setAiLoading] = useState(false);
     const [loadingStep, setLoadingStep] = useState('Preparando o estudo');
@@ -104,6 +109,11 @@ export default function Dashboard({
         items: devotionalAudioItems,
         answer: aiAnswer,
     }), [reference, devotionalAudioItems, aiAnswer]);
+
+    useEffect(() => {
+        setSelectedVerseId(null);
+        setCopyStatus('');
+    }, [search.term]);
 
     function submit(event) {
         event.preventDefault();
@@ -214,11 +224,19 @@ export default function Dashboard({
         }));
 
         if (data.favorited && data.favorite) {
+            setFavoriteOverrides((current) => ({
+                ...current,
+                [verseId]: true,
+            }));
             setFavoriteHistory((current) => [
                 data.favorite,
                 ...current.filter((favorite) => favorite.verseId !== data.favorite.verseId),
             ].slice(0, 6));
         } else {
+            setFavoriteOverrides((current) => ({
+                ...current,
+                [verseId]: false,
+            }));
             setFavoriteHistory((current) => current.filter((favorite) => favorite.verseId !== verseId));
         }
 
@@ -260,6 +278,72 @@ export default function Dashboard({
         setReference(nextReference);
 
         window.location.assign(`/buscar?q=${encodeURIComponent(nextReference)}`);
+    }
+
+    function scrollToPanel(panelId: string) {
+        window.setTimeout(() => {
+            document.getElementById(panelId)?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start',
+            });
+        }, 0);
+    }
+
+    function handleSidebarNavigate(label: string) {
+        setActiveNav(label);
+
+        const actions: Record<string, () => void> = {
+            Inicio: () => window.scrollTo({ top: 0, behavior: 'smooth' }),
+            Biblia: () => scrollToPanel('bible-reader'),
+            Estudos: () => {
+                setActiveTab('Estudos');
+                scrollToPanel('ai-study-card');
+            },
+            'Planos de Leitura': () => scrollToPanel('reading-plan-card'),
+            Favoritos: () => scrollToPanel('favorites-card'),
+            Anotacoes: () => scrollToPanel('notes-card'),
+            Historico: () => scrollToPanel('history-card'),
+        };
+
+        actions[label]?.();
+    }
+
+    function selectAdjacentVerse(direction: -1 | 1) {
+        if (! search.results?.length) {
+            return;
+        }
+
+        const nextVerse = search.results[currentVerseIndex + direction];
+
+        if (nextVerse) {
+            setSelectedVerseId(nextVerse.id);
+            setReference(nextVerse.reference);
+            setCopyStatus('');
+            scrollToPanel('bible-reader');
+        }
+    }
+
+    async function copyPrimaryVerse() {
+        if (! primaryVerse) {
+            return;
+        }
+
+        const text = `${primaryVerse.reference}\n${primaryVerse.text}`;
+
+        try {
+            await navigator.clipboard.writeText(text);
+            setCopyStatus('Copiado');
+        } catch (error) {
+            setCopyStatus('Nao foi possivel copiar');
+        }
+    }
+
+    async function togglePrimaryFavorite() {
+        if (! primaryVerse) {
+            return;
+        }
+
+        await toggleFavorite(primaryVerse.id);
     }
 
     function openAnswer(answer) {
@@ -311,22 +395,34 @@ export default function Dashboard({
         }, attempt < 2 ? 1800 : 3000);
     }
 
-    const primaryVerse = search.results?.[0] ?? null;
+    const selectedVerseIndex = search.results?.findIndex((result) => result.id === selectedVerseId) ?? -1;
+    const currentVerseIndex = selectedVerseIndex >= 0 ? selectedVerseIndex : 0;
+    const primaryVerse = search.results?.[currentVerseIndex] ?? null;
     const passageLabel = primaryVerse?.reference ?? reference;
+    const canSelectPreviousVerse = currentVerseIndex > 0;
+    const canSelectNextVerse = currentVerseIndex < (search.results?.length ?? 0) - 1;
+    const primaryVerseFavorited = Boolean(primaryVerse && (
+        favoriteOverrides[primaryVerse.id] ?? (primaryVerse.isFavorited || favoriteHistory.some((favorite) => favorite.verseId === primaryVerse.id))
+    ));
 
     return (
         <>
             <Head title="Dashboard" />
 
             <main className="bible-shell">
-                <DashboardSidebar stats={statsState} />
+                <DashboardSidebar stats={statsState} activeLabel={activeNav} onNavigate={handleSidebarNavigate} />
 
                 <section className="bible-main">
-                    <TopBar reference={reference} onReferenceChange={setReference} onSubmit={submit} />
+                    <TopBar
+                        reference={reference}
+                        onReferenceChange={setReference}
+                        onSubmit={submit}
+                        onReadingMode={() => scrollToPanel('bible-reader')}
+                    />
 
                     <section className="study-canvas">
                         <div className="open-book">
-                            <div className="book-page book-page-left">
+                            <div id="bible-reader" className="book-page book-page-left">
                                 <div className="breadcrumb-line">
                                     <span>Joao</span>
                                     <span>Capitulo 3</span>
@@ -337,8 +433,13 @@ export default function Dashboard({
                                     <>
                                         <div className="verse-heading">
                                             <h1>{primaryVerse.reference}</h1>
-                                            <button type="button" aria-label="Favoritar versiculo">
-                                                <Star className="h-4 w-4" />
+                                            <button
+                                                type="button"
+                                                aria-label={primaryVerseFavorited ? 'Versiculo favorito' : 'Favoritar versiculo'}
+                                                onClick={togglePrimaryFavorite}
+                                                title={primaryVerseFavorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                                            >
+                                                <Star className={`h-4 w-4 ${primaryVerseFavorited ? 'fill-[#8a6117]' : ''}`} />
                                             </button>
                                         </div>
                                         <p className="verse-copy">{primaryVerse.text}</p>
@@ -356,9 +457,15 @@ export default function Dashboard({
                                         />
 
                                         <div className="book-actions">
-                                            <button type="button">Anterior</button>
-                                            <button type="button">Copiar</button>
-                                            <button type="button">Proximo</button>
+                                            <button type="button" onClick={() => selectAdjacentVerse(-1)} disabled={!canSelectPreviousVerse}>
+                                                Anterior
+                                            </button>
+                                            <button type="button" onClick={copyPrimaryVerse}>
+                                                {copyStatus || 'Copiar'}
+                                            </button>
+                                            <button type="button" onClick={() => selectAdjacentVerse(1)} disabled={!canSelectNextVerse}>
+                                                Proximo
+                                            </button>
                                         </div>
 
                                         <div className="verse-list">
@@ -389,7 +496,7 @@ export default function Dashboard({
                             <div className="book-gutter" />
 
                             <div className="book-page book-page-right">
-                                <div className="ai-card">
+                                <div id="ai-study-card" className="ai-card">
                                     <div className="tabs-row">
                                         {tabs.map((tab) => {
                                             const Icon = tab.icon;
@@ -411,7 +518,15 @@ export default function Dashboard({
 
                                     <div className="ai-content">
                                         <PodcastAudioPanel episode={podcastEpisode} hasAnswer={Boolean(aiAnswer)} loading={aiLoading} />
-                                        <StudyPanel title={activeTab} section={activeSection} answer={aiAnswer} loading={aiLoading} loadingStep={loadingStep} />
+                                        <StudyPanel
+                                            title={activeTab}
+                                            section={activeSection}
+                                            answer={aiAnswer}
+                                            loading={aiLoading}
+                                            loadingStep={loadingStep}
+                                            timeline={primaryVerse?.timeline}
+                                            reference={passageLabel}
+                                        />
 
                                         <div className="agent-status-card">
                                             <div className="agent-status-title">
@@ -1019,7 +1134,7 @@ function normalizeSpeechText(value) {
         .trim();
 }
 
-function StudyPanel({ title, section, answer, loading, loadingStep }) {
+function StudyPanel({ title, section, answer, loading, loadingStep, timeline = null, reference = '' }) {
     if (loading && ['queued', 'running'].includes(answer?.status)) {
         return (
             <div className="rounded-md border border-[#e4e2da] p-4">
@@ -1062,6 +1177,7 @@ function StudyPanel({ title, section, answer, loading, loadingStep }) {
                     </div>
                 )}
                 {section.agent === 'study' && <StudyTools text={section.text} />}
+                {section.agent === 'chronology' && <ChronologyContext timeline={timeline} reference={reference} />}
             </div>
         );
     }
@@ -1070,6 +1186,7 @@ function StudyPanel({ title, section, answer, loading, loadingStep }) {
         return (
             <div className="rounded-md border border-[#e4e2da] p-4">
                 <h3 className="text-sm font-semibold text-[#111827]">{title}</h3>
+                {title === 'Cronologia' && <ChronologyContext timeline={timeline} reference={reference} />}
                 <p className="mt-3 text-sm leading-6 text-[#4b5563]">
                     Este agente ainda nao retornou conteudo para esta pergunta.
                 </p>
@@ -1080,6 +1197,7 @@ function StudyPanel({ title, section, answer, loading, loadingStep }) {
     return (
         <div className="rounded-md border border-[#e4e2da] p-4">
             <h3 className="text-sm font-semibold text-[#111827]">{title}</h3>
+            {title === 'Cronologia' && <ChronologyContext timeline={timeline} reference={reference} />}
             <p className="mt-3 text-sm leading-6 text-[#4b5563]">
                 Este espaco recebera respostas fundamentadas, contexto historico, referencias cruzadas e aplicacoes praticas.
             </p>

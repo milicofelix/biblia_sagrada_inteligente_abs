@@ -184,4 +184,20 @@ class BibleImportTest extends TestCase
                 ->where('search.results.0.crossReferences.0.reference', 'Joao 3:16')
                 ->where('search.results.0.crossReferences.0.direction', 'incoming'));
     }
+
+    public function test_search_page_includes_timeline_context_for_results(): void
+    {
+        $this->seed(BibleCatalogSeeder::class);
+        $this->artisan('bible:import', ['path' => 'tests/Fixtures/bible/sample-translation.json']);
+
+        $this
+            ->get('/buscar?q=Joao%203%3A16')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Dashboard')
+                ->where('search.results.0.reference', 'Joao 3:16')
+                ->where('search.results.0.timeline.book', 'Joao')
+                ->where('search.results.0.timeline.testament', 'Novo Testamento')
+                ->where('search.results.0.timeline.phase.title', 'Jesus, Reino e Evangelho'));
+    }
 }

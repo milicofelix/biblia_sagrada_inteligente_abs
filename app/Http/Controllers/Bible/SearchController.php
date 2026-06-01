@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Bible\CrossReference;
 use App\Models\Bible\StudyNote;
 use App\Models\Bible\Verse;
+use App\Services\Bible\BiblicalTimelineResolver;
 use App\Services\Bible\References\BiblePassageLookup;
 use App\Support\DashboardProps;
 use Illuminate\Http\Request;
@@ -24,7 +25,7 @@ class SearchController extends Controller
 
             if ($verses->isEmpty()) {
                 $verses = Verse::query()
-                    ->with(['translation:id,abbreviation', 'book:id,name'])
+                    ->with(['translation:id,abbreviation', 'book:id,name,testament,position'])
                     ->search($term)
                     ->limit(8)
                     ->get();
@@ -61,6 +62,7 @@ class SearchController extends Controller
             'book' => $verse->book?->name,
             'isFavorited' => $verse->favorites->isNotEmpty(),
             'crossReferences' => $this->serializeCrossReferences($verse),
+            'timeline' => app(BiblicalTimelineResolver::class)->forVerse($verse),
             'latestNote' => $verse->notes
                 ->sortByDesc('created_at')
                 ->map(fn (StudyNote $note): array => [

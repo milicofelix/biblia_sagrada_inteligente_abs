@@ -26,7 +26,7 @@ type ReadingPlanCardProps = {
 
 export function HistoryCard({ answers, onOpenAnswer }: HistoryCardProps) {
     return (
-        <div className="library-card compact-list-card">
+        <div id="history-card" className="library-card compact-list-card">
             <div className="card-title-icon">
                 <Clock3 className="h-5 w-5" />
                 <h2>Historico</h2>
@@ -49,7 +49,7 @@ export function HistoryCard({ answers, onOpenAnswer }: HistoryCardProps) {
 
 export function NotesCard({ notes, onOpenNote }: NotesCardProps) {
     return (
-        <div className="library-card compact-list-card">
+        <div id="notes-card" className="library-card compact-list-card">
             <div className="card-title-icon">
                 <NotebookPen className="h-5 w-5" />
                 <h2>Caderno</h2>
@@ -72,7 +72,7 @@ export function NotesCard({ notes, onOpenNote }: NotesCardProps) {
 
 export function FavoritesCard({ favorites, onOpenFavorite }: FavoritesCardProps) {
     return (
-        <div className="library-card compact-list-card">
+        <div id="favorites-card" className="library-card compact-list-card">
             <div className="card-title-icon">
                 <Star className="h-5 w-5" />
                 <h2>Favoritos</h2>
@@ -117,7 +117,7 @@ export function ReadingPlanCard({ plan, onCompleteDay }: ReadingPlanCardProps) {
 
     if (!plan) {
         return (
-            <div className="library-card reading-plan-card">
+            <div id="reading-plan-card" className="library-card reading-plan-card">
                 <div className="card-title-icon">
                     <CalendarDays className="h-5 w-5" />
                     <h2>Plano de Leitura</h2>
@@ -128,7 +128,7 @@ export function ReadingPlanCard({ plan, onCompleteDay }: ReadingPlanCardProps) {
     }
 
     return (
-        <div className="library-card reading-plan-card">
+        <div id="reading-plan-card" className="library-card reading-plan-card">
             <div className="card-title-icon">
                 <CalendarDays className="h-5 w-5" />
                 <h2>Plano de Leitura</h2>
