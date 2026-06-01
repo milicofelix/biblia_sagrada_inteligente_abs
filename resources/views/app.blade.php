@@ -7,7 +7,7 @@
         <title inertia>{{ config('app.name', 'Biblia Sagrada Inteligente ABS') }}</title>
         @fonts
         @viteReactRefresh
-        @vite(['resources/css/app.css', 'resources/js/app.jsx'])
+        @vite(['resources/css/app.css', 'resources/js/app.tsx'])
         @inertiaHead
     </head>
     <body>

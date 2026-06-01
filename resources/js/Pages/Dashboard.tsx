@@ -1,36 +1,33 @@
 import { Head, router } from '@inertiajs/react';
 import {
-    Bell,
     BookOpen,
     Brain,
     CalendarDays,
     Check,
-    ChevronDown,
-    Clock3,
     Copy,
     GitBranch,
-    Home,
     Library,
     ListChecks,
     MessageSquareText,
     NotebookPen,
     Pause,
     Headphones,
-    Moon,
-    PenLine,
     Play,
-    Save,
     Send,
-    Search,
-    Settings,
     Share2,
     Sparkles,
     Square,
     Star,
-    UserRound,
     Volume2,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+
+import { HistoryCard, NotesCard } from '../Components/Dashboard/LibraryCards';
+import { DashboardSidebar } from '../Components/Dashboard/Sidebar';
+import { TopBar } from '../Components/Dashboard/TopBar';
+import { VerseResult } from '../Components/Dashboard/VerseResult';
+import type { DashboardProps } from '../types/dashboard';
+import { formatDate } from '../utils/date';
 
 const agents = [
     {
@@ -74,24 +71,13 @@ const tabs = [
     { name: 'Estudos', icon: NotebookPen, agent: 'study' },
 ];
 
-const navigationItems = [
-    { label: 'Inicio', icon: Home, active: false },
-    { label: 'Biblia', icon: BookOpen, active: true },
-    { label: 'Estudos', icon: Library, active: false },
-    { label: 'Planos de Leitura', icon: CalendarDays, active: false },
-    { label: 'Favoritos', icon: Star, active: false },
-    { label: 'Anotacoes', icon: PenLine, active: false },
-    { label: 'Historico', icon: Clock3, active: false },
-    { label: 'Configuracoes', icon: Settings, active: false },
-];
-
 export default function Dashboard({
     initialReference = 'Joao 3:16',
     search = { term: '', results: [] },
     stats = {},
     recentAnswers = [],
     recentNotes = [],
-}) {
+}: DashboardProps) {
     const [reference, setReference] = useState(initialReference);
     const [activeTab, setActiveTab] = useState(tabs[0].name);
     const [statsState, setStatsState] = useState(stats);
@@ -141,7 +127,7 @@ export default function Dashboard({
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+                'X-CSRF-TOKEN': document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '',
                 Accept: 'application/json',
             },
             body: JSON.stringify({ question }),
@@ -177,7 +163,7 @@ export default function Dashboard({
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+                'X-CSRF-TOKEN': document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '',
                 Accept: 'application/json',
             },
             body: JSON.stringify({ body }),
@@ -268,49 +254,10 @@ export default function Dashboard({
             <Head title="Dashboard" />
 
             <main className="bible-shell">
-                <aside className="bible-sidebar">
-                    <AppLogo />
-
-                    <nav className="bible-nav" aria-label="Principal">
-                        {navigationItems.map((item) => (
-                            <SidebarNavItem key={item.label} item={item} />
-                        ))}
-                    </nav>
-
-                    <div className="sidebar-note">
-                        <p>Joao 3:16</p>
-                        <span>{statsState.verses ?? 0} versiculos indexados</span>
-                    </div>
-                </aside>
+                <DashboardSidebar stats={statsState} />
 
                 <section className="bible-main">
-                    <header className="bible-topbar">
-                        <form onSubmit={submit} className="top-search">
-                            <Search className="h-4 w-4" />
-                            <input
-                                value={reference}
-                                onChange={(event) => setReference(event.target.value)}
-                                placeholder="Buscar por palavra-chave, versiculo ou tema..."
-                            />
-                            <kbd>Ctrl K</kbd>
-                            <button type="submit">Buscar</button>
-                        </form>
-
-                        <div className="top-actions">
-                            <TopIconButton label="Modo leitura" icon={Moon} />
-                            <TopIconButton label="Notificacoes" icon={Bell} />
-                            <div className="profile-chip">
-                                <div className="profile-avatar">
-                                    <UserRound className="h-4 w-4" />
-                                </div>
-                                <div>
-                                    <strong>Adriano</strong>
-                                    <span>Plano Premium</span>
-                                </div>
-                                <ChevronDown className="h-4 w-4" />
-                            </div>
-                        </div>
-                    </header>
+                    <TopBar reference={reference} onReferenceChange={setReference} onSubmit={submit} />
 
                     <section className="study-canvas">
                         <div className="open-book">
@@ -447,7 +394,7 @@ export default function Dashboard({
                                     value={aiQuestion}
                                     onChange={(event) => setAiQuestion(event.target.value)}
                                     disabled={aiLoading}
-                                    rows="4"
+                                    rows={4}
                                 />
                                 {aiLoading && <BibleLoader label={loadingStep} compact />}
                                 {aiError && <p className="ask-error">{aiError}</p>}
@@ -464,105 +411,6 @@ export default function Dashboard({
                 </section>
             </main>
         </>
-    );
-}
-
-function AppLogo() {
-    return (
-        <div className="app-logo">
-            <div className="logo-mark">
-                <BookOpen className="h-7 w-7" />
-            </div>
-            <div>
-                <strong>BIBLIA</strong>
-                <span>INTELIGENTE</span>
-            </div>
-        </div>
-    );
-}
-
-function SidebarNavItem({ item }) {
-    const Icon = item.icon;
-
-    return (
-        <button type="button" className={item.active ? 'active' : ''}>
-            <Icon className="h-4 w-4" />
-            <span>{item.label}</span>
-        </button>
-    );
-}
-
-function TopIconButton({ label, icon: Icon }) {
-    return (
-        <button type="button" className="top-icon-button" aria-label={label}>
-            <Icon className="h-4 w-4" />
-        </button>
-    );
-}
-
-function HistoryCard({ answers, onOpenAnswer }) {
-    return (
-        <div className="library-card compact-list-card">
-            <div className="card-title-icon">
-                <Clock3 className="h-5 w-5" />
-                <h2>Historico</h2>
-            </div>
-            {answers.length > 0 ? (
-                <div className="compact-list">
-                    {answers.map((answer) => (
-                        <button key={answer.id} type="button" onClick={() => onOpenAnswer(answer)}>
-                            <span>{answer.question}</span>
-                            <small>{formatDate(answer.createdAt)} · {answer.sections?.length ?? 0} secoes</small>
-                        </button>
-                    ))}
-                </div>
-            ) : (
-                <p className="muted-card-text">Os estudos gerados aparecerao aqui.</p>
-            )}
-        </div>
-    );
-}
-
-function NotesCard({ notes, onOpenNote }) {
-    return (
-        <div className="library-card compact-list-card">
-            <div className="card-title-icon">
-                <NotebookPen className="h-5 w-5" />
-                <h2>Caderno</h2>
-            </div>
-            {notes.length > 0 ? (
-                <div className="compact-list">
-                    {notes.map((note) => (
-                        <button key={note.id} type="button" onClick={() => onOpenNote(note)}>
-                            <span>{note.reference}</span>
-                            <small>{note.body}</small>
-                        </button>
-                    ))}
-                </div>
-            ) : (
-                <p className="muted-card-text">Suas notas salvas aparecerao aqui.</p>
-            )}
-        </div>
-    );
-}
-
-function formatDate(value) {
-    if (!value) {
-        return 'Agora';
-    }
-
-    return new Intl.DateTimeFormat('pt-BR', {
-        dateStyle: 'short',
-        timeStyle: 'short',
-    }).format(new Date(value));
-}
-
-function Metric({ label, value }) {
-    return (
-        <div className="rounded-md border border-[#d8d7cf] bg-white px-4 py-3">
-            <p className="text-sm text-[#6b7280]">{label}</p>
-            <p className="mt-1 text-2xl font-semibold text-[#111827]">{value}</p>
-        </div>
     );
 }
 
@@ -1105,74 +953,6 @@ function normalizeSpeechText(value) {
         .replace(/[*_`>]/g, '')
         .replace(/\s+/g, ' ')
         .trim();
-}
-
-function VerseResult({ result, onSaveNote }) {
-    const [noteBody, setNoteBody] = useState(result.latestNote?.body ?? '');
-    const [noteStatus, setNoteStatus] = useState(result.latestNote ? 'Salva' : '');
-    const [saving, setSaving] = useState(false);
-
-    async function submitNote(event) {
-        event.preventDefault();
-
-        const body = noteBody.trim();
-
-        if (!body) {
-            setNoteStatus('Digite uma nota antes de salvar.');
-            return;
-        }
-
-        setSaving(true);
-        setNoteStatus('');
-
-        try {
-            await onSaveNote(result.id, body);
-            setNoteStatus('Nota salva');
-        } catch (error) {
-            setNoteStatus(error.message);
-        } finally {
-            setSaving(false);
-        }
-    }
-
-    return (
-        <article className="rounded-md border border-[#e4e2da] p-4">
-            <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-sm font-semibold text-[#111827]">{result.reference}</h3>
-                {result.translation && (
-                    <span className="rounded-md bg-[#eef2ff] px-2 py-0.5 text-xs font-medium text-[#3730a3]">
-                        {result.translation}
-                    </span>
-                )}
-            </div>
-            <p className="mt-3 text-base leading-8 text-[#374151]">{result.text}</p>
-
-            <form onSubmit={submitNote} className="mt-4 rounded-md border border-[#e5e7eb] bg-[#fafaf7] p-3">
-                <label className="flex items-center gap-2 text-sm font-semibold text-[#111827]">
-                    <NotebookPen className="h-4 w-4 text-[#2563eb]" />
-                    Nota de estudo
-                </label>
-                <textarea
-                    value={noteBody}
-                    onChange={(event) => setNoteBody(event.target.value)}
-                    rows="3"
-                    placeholder="Escreva uma observacao, aplicacao ou pergunta sobre este versiculo."
-                    className="mt-3 w-full resize-none rounded-md border border-[#d1d5db] bg-white px-3 py-2 text-sm leading-6 text-[#111827] outline-none transition placeholder:text-[#9ca3af] focus:border-[#2563eb] focus:ring-2 focus:ring-[#bfdbfe]"
-                />
-                <div className="mt-3 flex flex-wrap items-center gap-3">
-                    <button
-                        type="submit"
-                        disabled={saving}
-                        className="inline-flex h-9 items-center rounded-md bg-[#111827] px-3 text-sm font-semibold text-white transition hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-70"
-                    >
-                        {saving ? 'Salvando...' : 'Salvar nota'}
-                        <Save className="ml-2 h-4 w-4" />
-                    </button>
-                    {noteStatus && <span className="text-sm text-[#4b5563]">{noteStatus}</span>}
-                </div>
-            </form>
-        </article>
-    );
 }
 
 function StudyPanel({ title, section, answer, loading, loadingStep }) {
