@@ -286,7 +286,15 @@ export default function Dashboard({
                             <div className="px-5 py-6">
                                 {search.results?.length > 0 ? (
                                     <div className="space-y-4">
-                                        <BibleAudioReader results={search.results} />
+                                        <SpeechPlayer
+                                            title="Leitor do texto biblico"
+                                            description="Use para ouvir os versiculos encontrados sem depender de API paga."
+                                            items={search.results.map((result) => ({
+                                                reference: result.reference,
+                                                text: result.text,
+                                            }))}
+                                            emptyMessage="Nenhum versiculo disponivel para leitura."
+                                        />
                                         {search.results.map((result) => (
                                             <VerseResult key={result.id} result={result} onSaveNote={saveStudyNote} />
                                         ))}
@@ -497,11 +505,18 @@ function Metric({ label, value }) {
 }
 
 
-function BibleAudioReader({ results = [] }) {
+
+function SpeechPlayer({
+    title = 'Leitor com audio do navegador',
+    description = 'Use para ouvir este conteudo sem depender de API paga.',
+    items = [],
+    emptyMessage = 'Nenhum texto disponivel para leitura.',
+    compact = false,
+}) {
     const synthRef = useRef(null);
     const stopRequestedRef = useRef(false);
     const currentIndexRef = useRef(0);
-    const resultsRef = useRef(results);
+    const itemsRef = useRef(items);
     const [supported, setSupported] = useState(null);
     const [voices, setVoices] = useState([]);
     const [selectedVoiceURI, setSelectedVoiceURI] = useState('');
@@ -509,12 +524,17 @@ function BibleAudioReader({ results = [] }) {
     const [status, setStatus] = useState('idle');
     const [currentIndex, setCurrentIndex] = useState(null);
 
-    const readableResults = useMemo(() => results.filter((result) => result?.text), [results]);
-    const currentReference = currentIndex !== null ? readableResults[currentIndex]?.reference : null;
+    const readableItems = useMemo(() => items
+        .map((item) => ({
+            reference: item?.reference ?? '',
+            text: normalizeSpeechText(item?.text ?? ''),
+        }))
+        .filter((item) => item.text), [items]);
+    const currentReference = currentIndex !== null ? readableItems[currentIndex]?.reference : null;
 
     useEffect(() => {
-        resultsRef.current = readableResults;
-    }, [readableResults]);
+        itemsRef.current = readableItems;
+    }, [readableItems]);
 
     useEffect(() => {
         if (typeof window === 'undefined' || !('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) {
@@ -552,7 +572,7 @@ function BibleAudioReader({ results = [] }) {
 
     useEffect(() => {
         stopAudio();
-    }, [readableResults.length]);
+    }, [readableItems.length]);
 
     function getSelectedVoice() {
         return voices.find((voice) => voice.voiceURI === selectedVoiceURI) ?? null;
@@ -560,7 +580,7 @@ function BibleAudioReader({ results = [] }) {
 
     function speakAt(index) {
         const synth = synthRef.current;
-        const current = resultsRef.current[index];
+        const current = itemsRef.current[index];
 
         if (!synth || !current) {
             setStatus('idle');
@@ -572,7 +592,8 @@ function BibleAudioReader({ results = [] }) {
         setCurrentIndex(index);
         setStatus('playing');
 
-        const utterance = new SpeechSynthesisUtterance(`${current.reference}. ${current.text}`);
+        const textToRead = current.reference ? `${current.reference}. ${current.text}` : current.text;
+        const utterance = new SpeechSynthesisUtterance(textToRead);
         utterance.lang = getSelectedVoice()?.lang ?? 'pt-BR';
         utterance.voice = getSelectedVoice();
         utterance.rate = Number(rate);
@@ -585,7 +606,7 @@ function BibleAudioReader({ results = [] }) {
 
             const nextIndex = currentIndexRef.current + 1;
 
-            if (nextIndex < resultsRef.current.length) {
+            if (nextIndex < itemsRef.current.length) {
                 speakAt(nextIndex);
                 return;
             }
@@ -603,7 +624,7 @@ function BibleAudioReader({ results = [] }) {
     }
 
     function startAudio() {
-        if (!supported || readableResults.length === 0) {
+        if (!supported || readableItems.length === 0) {
             return;
         }
 
@@ -642,17 +663,17 @@ function BibleAudioReader({ results = [] }) {
     }
 
     return (
-        <div className="rounded-md border border-[#dbeafe] bg-[#eff6ff] p-4">
+        <div className={`rounded-md border border-[#dbeafe] bg-[#eff6ff] ${compact ? 'p-3' : 'p-4'}`}>
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                     <div className="flex items-center gap-2 text-sm font-semibold text-[#1e3a8a]">
                         <Volume2 className="h-4 w-4" />
-                        Leitor com audio do navegador
+                        {title}
                     </div>
                     <p className="mt-1 text-sm leading-6 text-[#1e40af]">
                         {status === 'playing' && currentReference
                             ? `Lendo agora: ${currentReference}`
-                            : 'Use para ouvir os versiculos encontrados sem depender de API paga.'}
+                            : readableItems.length > 0 ? description : emptyMessage}
                     </p>
                 </div>
 
@@ -660,7 +681,7 @@ function BibleAudioReader({ results = [] }) {
                     <button
                         type="button"
                         onClick={startAudio}
-                        disabled={status === 'playing' || readableResults.length === 0}
+                        disabled={status === 'playing' || readableItems.length === 0}
                         className="inline-flex h-9 items-center rounded-md bg-[#2563eb] px-3 text-sm font-semibold text-white transition hover:bg-[#1d4ed8] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         <Play className="mr-2 h-4 w-4" />
@@ -729,6 +750,14 @@ function BibleAudioReader({ results = [] }) {
             </div>
         </div>
     );
+}
+
+function normalizeSpeechText(value) {
+    return String(value ?? '')
+        .replace(/^#+\s*/gm, '')
+        .replace(/[*_`>]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
 }
 
 function VerseResult({ result, onSaveNote }) {
@@ -818,6 +847,15 @@ function StudyPanel({ title, section, answer, loading, loadingStep }) {
                         Esta secao falhou nesta tentativa, mas o restante do estudo foi preservado.
                     </p>
                 )}
+                <div className="mt-4">
+                    <SpeechPlayer
+                        title={`Ouvir ${title}`}
+                        description={`Use para ouvir a secao ${title} gerada pelos agentes IA.`}
+                        items={[{ reference: title, text: section.text }]}
+                        emptyMessage="Esta secao ainda nao tem texto para leitura."
+                        compact
+                    />
+                </div>
                 <div className="mt-3 max-h-[420px] space-y-3 overflow-auto pr-2 text-sm leading-6 text-[#374151]">
                     {section.text.split('\n').filter(Boolean).map((line, index) => (
                         <p key={`${line}-${index}`}>{line.replace(/^#+\s*/, '')}</p>

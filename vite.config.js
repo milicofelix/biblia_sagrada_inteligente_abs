@@ -22,12 +22,12 @@ export default defineConfig({
         host: '0.0.0.0',
         port: 5173,
         strictPort: true,
-        origin: 'http://localhost:5176',
+        origin: 'http://192.168.1.3:5176',
         cors: {
-            origin: 'http://localhost:8086',
+            origin: 'http://192.168.1.3:8086',
         },
         hmr: {
-            host: 'localhost',
+            host: '192.168.1.3',
             port: 5176,
         },
         watch: {
