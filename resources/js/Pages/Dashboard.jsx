@@ -1,25 +1,33 @@
 import { Head, router } from '@inertiajs/react';
 import {
+    Bell,
     BookOpen,
     Brain,
     CalendarDays,
     Check,
+    ChevronDown,
     Clock3,
     Copy,
     GitBranch,
+    Home,
     Library,
     ListChecks,
     MessageSquareText,
     NotebookPen,
     Pause,
     Headphones,
+    Moon,
+    PenLine,
     Play,
     Save,
     Send,
     Search,
+    Settings,
     Share2,
     Sparkles,
     Square,
+    Star,
+    UserRound,
     Volume2,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -64,6 +72,17 @@ const tabs = [
     { name: 'Aplicacao', icon: ListChecks, agent: 'practical_application' },
     { name: 'Cronologia', icon: CalendarDays, agent: 'chronology' },
     { name: 'Estudos', icon: NotebookPen, agent: 'study' },
+];
+
+const navigationItems = [
+    { label: 'Inicio', icon: Home, active: false },
+    { label: 'Biblia', icon: BookOpen, active: true },
+    { label: 'Estudos', icon: Library, active: false },
+    { label: 'Planos de Leitura', icon: CalendarDays, active: false },
+    { label: 'Favoritos', icon: Star, active: false },
+    { label: 'Anotacoes', icon: PenLine, active: false },
+    { label: 'Historico', icon: Clock3, active: false },
+    { label: 'Configuracoes', icon: Settings, active: false },
 ];
 
 export default function Dashboard({
@@ -240,265 +259,290 @@ export default function Dashboard({
         }, attempt < 2 ? 1800 : 3000);
     }
 
+    const primaryVerse = search.results?.[0] ?? null;
+    const passageLabel = primaryVerse?.reference ?? reference;
+    const progressWidth = `${Math.min(100, Math.max(8, Math.round(((statsState.notes ?? 0) + 23) % 90)))}%`;
+
     return (
         <>
             <Head title="Dashboard" />
 
-            <main className="min-h-screen bg-[#f7f7f4] text-[#1f2933]">
-                <section className="border-b border-[#d8d7cf] bg-[#fbfbf8]">
-                    <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-5 sm:px-6 lg:px-8">
-                        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-[#6b7280]">Biblia Sagrada Inteligente ABS</p>
-                                <h1 className="mt-1 text-2xl font-semibold text-[#111827]">
-                                    Mesa de estudo biblico com agentes IA
-                                </h1>
-                            </div>
+            <main className="bible-shell">
+                <aside className="bible-sidebar">
+                    <AppLogo />
 
-                            <form onSubmit={submit} className="flex w-full max-w-xl items-center gap-2">
-                                <label className="relative flex-1">
-                                    <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#6b7280]" />
-                                    <input
-                                        value={reference}
-                                        onChange={(event) => setReference(event.target.value)}
-                                        placeholder="Buscar passagem, tema ou pergunta"
-                                        className="h-11 w-full rounded-md border border-[#c7c6bd] bg-white pl-10 pr-3 text-sm text-[#111827] outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#bfdbfe]"
-                                    />
-                                </label>
-                                <button
-                                    type="submit"
-                                    className="inline-flex h-11 items-center justify-center rounded-md bg-[#2563eb] px-4 text-sm font-semibold text-white transition hover:bg-[#1d4ed8] focus:outline-none focus:ring-2 focus:ring-[#93c5fd]"
-                                >
-                                    <Search className="mr-2 h-4 w-4" />
-                                    Buscar
-                                </button>
-                            </form>
-                        </div>
+                    <nav className="bible-nav" aria-label="Principal">
+                        {navigationItems.map((item) => (
+                            <SidebarNavItem key={item.label} item={item} />
+                        ))}
+                    </nav>
 
-                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                            <Metric label="Livros catalogados" value={statsState.books ?? 0} />
-                            <Metric label="Versiculos indexados" value={statsState.verses ?? 0} />
-                            <Metric label="Notas de estudo" value={statsState.notes ?? 0} />
-                            <Metric label="Execucoes de agentes" value={statsState.agentRuns ?? 0} />
-                        </div>
+                    <div className="sidebar-note">
+                        <p>Joao 3:16</p>
+                        <span>{statsState.verses ?? 0} versiculos indexados</span>
                     </div>
-                </section>
+                </aside>
 
-                <section className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:px-8">
-                    <div className="space-y-6">
-                        <div className="rounded-md border border-[#d8d7cf] bg-white">
-                            <div className="flex items-center justify-between border-b border-[#e4e2da] px-5 py-4">
-                                <div>
-                                    <h2 className="text-lg font-semibold text-[#111827]">Texto biblico</h2>
-                                    <p className="mt-1 text-sm text-[#6b7280]">A importacao da Biblia vai preencher este painel.</p>
+                <section className="bible-main">
+                    <header className="bible-topbar">
+                        <form onSubmit={submit} className="top-search">
+                            <Search className="h-4 w-4" />
+                            <input
+                                value={reference}
+                                onChange={(event) => setReference(event.target.value)}
+                                placeholder="Buscar por palavra-chave, versiculo ou tema..."
+                            />
+                            <kbd>Ctrl K</kbd>
+                            <button type="submit">Buscar</button>
+                        </form>
+
+                        <div className="top-actions">
+                            <TopIconButton label="Modo leitura" icon={Moon} />
+                            <TopIconButton label="Notificacoes" icon={Bell} />
+                            <div className="profile-chip">
+                                <div className="profile-avatar">
+                                    <UserRound className="h-4 w-4" />
                                 </div>
-                                <span className="rounded-md bg-[#e0f2fe] px-2.5 py-1 text-xs font-semibold text-[#075985]">
-                                    FULLTEXT inicial
-                                </span>
+                                <div>
+                                    <strong>Adriano</strong>
+                                    <span>Plano Premium</span>
+                                </div>
+                                <ChevronDown className="h-4 w-4" />
                             </div>
+                        </div>
+                    </header>
 
-                            <div className="px-5 py-6">
-                                {search.results?.length > 0 ? (
-                                    <div className="space-y-4">
+                    <section className="study-canvas">
+                        <div className="open-book">
+                            <div className="book-page book-page-left">
+                                <div className="breadcrumb-line">
+                                    <span>Joao</span>
+                                    <span>Capitulo 3</span>
+                                    <span>{passageLabel}</span>
+                                </div>
+
+                                {primaryVerse ? (
+                                    <>
+                                        <div className="verse-heading">
+                                            <h1>{primaryVerse.reference}</h1>
+                                            <button type="button" aria-label="Favoritar versiculo">
+                                                <Star className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                        <p className="verse-copy">{primaryVerse.text}</p>
+                                        <p className="translation-line">{primaryVerse.translation ?? 'JFA'}</p>
+
                                         <SpeechPlayer
-                                            title="Leitor do texto biblico"
-                                            description="Use para ouvir os versiculos encontrados sem depender de API paga."
+                                            title="Ouvir capitulo"
+                                            description="Leitura dos versiculos encontrados."
                                             items={search.results.map((result) => ({
                                                 reference: result.reference,
                                                 text: result.text,
                                             }))}
                                             emptyMessage="Nenhum versiculo disponivel para leitura."
+                                            compact
                                         />
-                                        {search.results.map((result) => (
-                                            <VerseResult key={result.id} result={result} onSaveNote={saveStudyNote} />
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p className="max-w-3xl text-base leading-8 text-[#374151]">
-                                        {search.term
-                                            ? 'Nenhum versiculo foi encontrado ainda. Depois da importacao, os resultados aparecerao aqui.'
-                                            : 'Quando os versiculos forem importados, a busca exibira aqui a passagem encontrada, mantendo traducao, livro, capitulo, versiculo e relevancia textual para alimentar os agentes.'}
-                                    </p>
-                                )}
-                            </div>
-                        </div>
 
-                        <div className="rounded-md border border-[#d8d7cf] bg-white">
-                            <div className="flex flex-wrap gap-2 border-b border-[#e4e2da] px-4 py-3">
-                                {tabs.map((tab) => {
-                                    const Icon = tab.icon;
-                                    const selected = activeTab === tab.name;
+                                        <div className="book-actions">
+                                            <button type="button">Anterior</button>
+                                            <button type="button">Copiar</button>
+                                            <button type="button">Proximo</button>
+                                        </div>
 
-                                    return (
-                                        <button
-                                            key={tab.name}
-                                            type="button"
-                                            onClick={() => setActiveTab(tab.name)}
-                                            className={`inline-flex h-9 items-center rounded-md px-3 text-sm font-medium transition ${
-                                                selected
-                                                    ? 'bg-[#111827] text-white'
-                                                    : 'text-[#4b5563] hover:bg-[#f3f4f6] hover:text-[#111827]'
-                                            }`}
-                                        >
-                                            <Icon className="mr-2 h-4 w-4" />
-                                            {tab.name}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-
-                            <div className="space-y-4 px-5 py-5">
-                                <PodcastAudioPanel episode={podcastEpisode} hasAnswer={Boolean(aiAnswer)} loading={aiLoading} />
-
-                                <div className="grid gap-4 md:grid-cols-2">
-                                    <StudyPanel title={activeTab} section={activeSection} answer={aiAnswer} loading={aiLoading} loadingStep={loadingStep} />
-                                <div className="rounded-md border border-[#e4e2da] bg-[#fafaf7] p-4">
-                                    <div className="flex items-center gap-2 text-sm font-semibold text-[#111827]">
-                                        <Sparkles className="h-4 w-4 text-[#2563eb]" />
-                                        Estado dos agentes
-                                    </div>
-                                    {aiAnswer?.agents?.length > 0 ? (
-                                        <div className="mt-3 space-y-2">
-                                            {aiAnswer.agents.map((agent) => (
-                                                <div key={agent.agent} className="flex items-center justify-between gap-3 text-sm">
-                                                    <span className="truncate text-[#4b5563]">{agent.title}</span>
-                                                    <AgentStatus status={agent.status} />
-                                                </div>
+                                        <div className="verse-list">
+                                            {search.results.slice(0, 3).map((result) => (
+                                                <VerseResult key={result.id} result={result} onSaveNote={saveStudyNote} />
                                             ))}
                                         </div>
-                                    ) : (
-                                        <p className="mt-3 text-sm leading-6 text-[#4b5563]">
-                                            Faca uma pergunta para gerar contexto, conexoes, aplicacao, cronologia e estudo.
+                                    </>
+                                ) : (
+                                    <div className="empty-book-state">
+                                        <BookOpen className="h-8 w-8" />
+                                        <h1>Joao 3:16</h1>
+                                        <p>
+                                            {search.term
+                                                ? 'Nenhum versiculo foi encontrado para esta busca.'
+                                                : 'Busque uma passagem para abrir o texto biblico nesta pagina.'}
                                         </p>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
                             </div>
-                        </div>
-                    </div>
-                    </div>
 
-                    <aside className="space-y-4">
-                        <div className="rounded-md border border-[#d8d7cf] bg-white">
-                            <div className="border-b border-[#e4e2da] px-4 py-3">
-                                <h2 className="text-base font-semibold text-[#111827]">Agentes</h2>
-                            </div>
-                            <div className="divide-y divide-[#ecebe4]">
-                                {agents.map((agent) => {
-                                    const Icon = agent.icon;
+                            <div className="book-gutter" />
 
-                                    return (
-                                        <div key={agent.name} className="flex gap-3 px-4 py-4">
-                                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#eef2ff] text-[#3730a3]">
-                                                <Icon className="h-5 w-5" />
+                            <div className="book-page book-page-right">
+                                <div className="ai-card">
+                                    <div className="tabs-row">
+                                        {tabs.map((tab) => {
+                                            const Icon = tab.icon;
+                                            const selected = activeTab === tab.name;
+
+                                            return (
+                                                <button
+                                                    key={tab.name}
+                                                    type="button"
+                                                    onClick={() => setActiveTab(tab.name)}
+                                                    className={selected ? 'selected' : ''}
+                                                >
+                                                    <Icon className="h-4 w-4" />
+                                                    {tab.name}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <div className="ai-content">
+                                        <PodcastAudioPanel episode={podcastEpisode} hasAnswer={Boolean(aiAnswer)} loading={aiLoading} />
+                                        <StudyPanel title={activeTab} section={activeSection} answer={aiAnswer} loading={aiLoading} loadingStep={loadingStep} />
+
+                                        <div className="agent-status-card">
+                                            <div className="agent-status-title">
+                                                <Sparkles className="h-4 w-4" />
+                                                Estado dos agentes
                                             </div>
-                                            <div className="min-w-0">
-                                                <div className="flex items-center gap-2">
-                                                    <h3 className="truncate text-sm font-semibold text-[#111827]">{agent.name}</h3>
-                                                    <span className="rounded-md bg-[#ecfdf5] px-2 py-0.5 text-xs font-medium text-[#047857]">
-                                                        {agent.status}
-                                                    </span>
+                                            {aiAnswer?.agents?.length > 0 ? (
+                                                <div className="agent-status-list">
+                                                    {aiAnswer.agents.map((agent) => (
+                                                        <div key={agent.agent}>
+                                                            <span>{agent.title}</span>
+                                                            <AgentStatus status={agent.status} />
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                                <p className="mt-1 text-sm leading-5 text-[#6b7280]">{agent.description}</p>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        <form onSubmit={askAgents} className="rounded-md border border-[#d8d7cf] bg-[#111827] p-4 text-white">
-                            <div className="flex items-center gap-2 text-sm font-semibold">
-                                <MessageSquareText className="h-4 w-4 text-[#93c5fd]" />
-                                Perguntar aos agentes
-                            </div>
-                            <textarea
-                                value={aiQuestion}
-                                onChange={(event) => setAiQuestion(event.target.value)}
-                                disabled={aiLoading}
-                                rows="5"
-                                className="mt-3 w-full resize-none rounded-md border border-[#374151] bg-[#1f2937] px-3 py-2 text-sm leading-6 text-white outline-none transition placeholder:text-[#9ca3af] focus:border-[#93c5fd] focus:ring-2 focus:ring-[#1d4ed8] disabled:opacity-70"
-                            />
-                            {aiLoading && <BibleLoader label={loadingStep} compact />}
-                            {aiError && (
-                                <p className="mt-3 rounded-md bg-[#7f1d1d] px-3 py-2 text-sm leading-5 text-[#fee2e2]">{aiError}</p>
-                            )}
-                            <button
-                                type="submit"
-                                disabled={aiLoading}
-                                className="mt-4 inline-flex h-9 items-center rounded-md bg-white px-3 text-sm font-semibold text-[#111827] transition hover:bg-[#f3f4f6] disabled:cursor-not-allowed disabled:opacity-70"
-                            >
-                                {aiLoading ? 'Estudo em andamento' : 'Perguntar'}
-                                {aiLoading ? <BookOpen className="ml-2 h-4 w-4 animate-pulse" /> : <Send className="ml-2 h-4 w-4" />}
-                            </button>
-                        </form>
-
-                        <div className="rounded-md border border-[#d8d7cf] bg-white">
-                            <div className="flex items-center gap-2 border-b border-[#e4e2da] px-4 py-3">
-                                <Clock3 className="h-4 w-4 text-[#2563eb]" />
-                                <h2 className="text-base font-semibold text-[#111827]">Historico</h2>
-                            </div>
-                            {answerHistory.length > 0 ? (
-                                <div className="divide-y divide-[#ecebe4]">
-                                    {answerHistory.map((answer) => (
-                                        <button
-                                            key={answer.id}
-                                            type="button"
-                                            onClick={() => openAnswer(answer)}
-                                            className="block w-full px-4 py-3 text-left transition hover:bg-[#f9fafb]"
-                                        >
-                                            <span className="line-clamp-2 text-sm font-medium leading-5 text-[#111827]">
-                                                {answer.question}
-                                            </span>
-                                            <span className="mt-1 block text-xs text-[#6b7280]">
-                                                {formatDate(answer.createdAt)} · {answer.sections?.length ?? 0} secoes
-                                            </span>
-                                        </button>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p className="px-4 py-4 text-sm leading-6 text-[#6b7280]">
-                                    Os estudos gerados aparecerao aqui.
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="rounded-md border border-[#d8d7cf] bg-white">
-                            <div className="flex items-center gap-2 border-b border-[#e4e2da] px-4 py-3">
-                                <NotebookPen className="h-4 w-4 text-[#2563eb]" />
-                                <h2 className="text-base font-semibold text-[#111827]">Caderno</h2>
-                            </div>
-                            {noteHistory.length > 0 ? (
-                                <div className="divide-y divide-[#ecebe4]">
-                                    {noteHistory.map((note) => (
-                                        <button
-                                            key={note.id}
-                                            type="button"
-                                            onClick={() => openNote(note)}
-                                            className="block w-full px-4 py-3 text-left transition hover:bg-[#f9fafb]"
-                                        >
-                                            <span className="text-sm font-semibold text-[#111827]">{note.reference}</span>
-                                            {note.translation && (
-                                                <span className="ml-2 rounded-md bg-[#eef2ff] px-2 py-0.5 text-xs font-medium text-[#3730a3]">
-                                                    {note.translation}
-                                                </span>
+                                            ) : (
+                                                <p>Faca uma pergunta para iniciar os agentes de estudo.</p>
                                             )}
-                                            <span className="mt-2 line-clamp-3 block text-sm leading-5 text-[#4b5563]">
-                                                {note.body}
-                                            </span>
-                                            <span className="mt-1 block text-xs text-[#6b7280]">{formatDate(note.createdAt)}</span>
-                                        </button>
-                                    ))}
+                                        </div>
+                                    </div>
                                 </div>
-                            ) : (
-                                <p className="px-4 py-4 text-sm leading-6 text-[#6b7280]">
-                                    Suas notas salvas aparecerao aqui.
-                                </p>
-                            )}
+                            </div>
                         </div>
-                    </aside>
+
+                        <aside className="right-library">
+                            <div className="library-card reading-plan-card">
+                                <h2>Plano de Leitura</h2>
+                                <p>O Novo Testamento em 90 dias</p>
+                                <div className="progress-track">
+                                    <span style={{ width: progressWidth }} />
+                                </div>
+                                <small>Dia 23 de 90</small>
+                                <button type="button">Continuar leitura</button>
+                            </div>
+
+                            <div className="library-card verse-day-card">
+                                <div className="card-title-icon">
+                                    <BookOpen className="h-5 w-5" />
+                                    <h2>Versiculo do Dia</h2>
+                                </div>
+                                <p>"Entrega o teu caminho ao SENHOR; confia nele, e o mais ele fara."</p>
+                                <strong>Salmos 37:5</strong>
+                            </div>
+
+                            <form onSubmit={askAgents} className="ask-card">
+                                <div className="card-title-icon">
+                                    <MessageSquareText className="h-5 w-5" />
+                                    <h2>Perguntar</h2>
+                                </div>
+                                <textarea
+                                    value={aiQuestion}
+                                    onChange={(event) => setAiQuestion(event.target.value)}
+                                    disabled={aiLoading}
+                                    rows="4"
+                                />
+                                {aiLoading && <BibleLoader label={loadingStep} compact />}
+                                {aiError && <p className="ask-error">{aiError}</p>}
+                                <button type="submit" disabled={aiLoading}>
+                                    {aiLoading ? 'Estudo em andamento' : 'Perguntar'}
+                                    {aiLoading ? <BookOpen className="h-4 w-4 animate-pulse" /> : <Send className="h-4 w-4" />}
+                                </button>
+                            </form>
+
+                            <HistoryCard answers={answerHistory} onOpenAnswer={openAnswer} />
+                            <NotesCard notes={noteHistory} onOpenNote={openNote} />
+                        </aside>
+                    </section>
                 </section>
             </main>
         </>
+    );
+}
+
+function AppLogo() {
+    return (
+        <div className="app-logo">
+            <div className="logo-mark">
+                <BookOpen className="h-7 w-7" />
+            </div>
+            <div>
+                <strong>BIBLIA</strong>
+                <span>INTELIGENTE</span>
+            </div>
+        </div>
+    );
+}
+
+function SidebarNavItem({ item }) {
+    const Icon = item.icon;
+
+    return (
+        <button type="button" className={item.active ? 'active' : ''}>
+            <Icon className="h-4 w-4" />
+            <span>{item.label}</span>
+        </button>
+    );
+}
+
+function TopIconButton({ label, icon: Icon }) {
+    return (
+        <button type="button" className="top-icon-button" aria-label={label}>
+            <Icon className="h-4 w-4" />
+        </button>
+    );
+}
+
+function HistoryCard({ answers, onOpenAnswer }) {
+    return (
+        <div className="library-card compact-list-card">
+            <div className="card-title-icon">
+                <Clock3 className="h-5 w-5" />
+                <h2>Historico</h2>
+            </div>
+            {answers.length > 0 ? (
+                <div className="compact-list">
+                    {answers.map((answer) => (
+                        <button key={answer.id} type="button" onClick={() => onOpenAnswer(answer)}>
+                            <span>{answer.question}</span>
+                            <small>{formatDate(answer.createdAt)} · {answer.sections?.length ?? 0} secoes</small>
+                        </button>
+                    ))}
+                </div>
+            ) : (
+                <p className="muted-card-text">Os estudos gerados aparecerao aqui.</p>
+            )}
+        </div>
+    );
+}
+
+function NotesCard({ notes, onOpenNote }) {
+    return (
+        <div className="library-card compact-list-card">
+            <div className="card-title-icon">
+                <NotebookPen className="h-5 w-5" />
+                <h2>Caderno</h2>
+            </div>
+            {notes.length > 0 ? (
+                <div className="compact-list">
+                    {notes.map((note) => (
+                        <button key={note.id} type="button" onClick={() => onOpenNote(note)}>
+                            <span>{note.reference}</span>
+                            <small>{note.body}</small>
+                        </button>
+                    ))}
+                </div>
+            ) : (
+                <p className="muted-card-text">Suas notas salvas aparecerao aqui.</p>
+            )}
+        </div>
     );
 }
 
@@ -927,6 +971,40 @@ function SpeechPlayer({
         return (
             <div className="rounded-md border border-[#fee2e2] bg-[#fef2f2] p-4 text-sm leading-6 text-[#991b1b]">
                 Este navegador nao disponibilizou leitura por voz nativa. Tente Chrome, Edge ou Safari atualizado.
+            </div>
+        );
+    }
+
+    if (compact) {
+        const isPlaying = status === 'playing';
+        const isPaused = status === 'paused';
+
+        return (
+            <div className="mini-speech-player">
+                <button
+                    type="button"
+                    onClick={isPaused ? resumeAudio : startAudio}
+                    disabled={isPlaying || readableItems.length === 0}
+                    aria-label={isPaused ? 'Continuar leitura' : title}
+                >
+                    <Play className="h-4 w-4" />
+                </button>
+                <div className="mini-speech-copy">
+                    <strong>{title}</strong>
+                    <span>
+                        {isPlaying && currentReference
+                            ? `Lendo agora: ${currentReference}`
+                            : readableItems.length > 0 ? description : emptyMessage}
+                    </span>
+                    <div className="mini-progress">
+                        <span className={isPlaying ? 'playing' : ''} />
+                    </div>
+                </div>
+                {['playing', 'paused'].includes(status) && (
+                    <button type="button" onClick={stopAudio} aria-label="Parar leitura">
+                        <Square className="h-3.5 w-3.5" />
+                    </button>
+                )}
             </div>
         );
     }
