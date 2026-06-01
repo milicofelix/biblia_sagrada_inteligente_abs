@@ -3,17 +3,21 @@ import {
     BookOpen,
     Brain,
     CalendarDays,
+    Check,
     Clock3,
+    Copy,
     GitBranch,
     Library,
     ListChecks,
     MessageSquareText,
     NotebookPen,
     Pause,
+    Headphones,
     Play,
     Save,
     Send,
     Search,
+    Share2,
     Sparkles,
     Square,
     Volume2,
@@ -85,6 +89,11 @@ export default function Dashboard({
         searchResults: search.results ?? [],
         answer: aiAnswer,
     }), [reference, search.results, aiAnswer]);
+    const podcastEpisode = useMemo(() => buildPodcastEpisode({
+        reference,
+        items: devotionalAudioItems,
+        answer: aiAnswer,
+    }), [reference, devotionalAudioItems, aiAnswer]);
 
     function submit(event) {
         event.preventDefault();
@@ -339,7 +348,7 @@ export default function Dashboard({
                             </div>
 
                             <div className="space-y-4 px-5 py-5">
-                                <DevotionalAudioPanel items={devotionalAudioItems} hasAnswer={Boolean(aiAnswer)} loading={aiLoading} />
+                                <PodcastAudioPanel episode={podcastEpisode} hasAnswer={Boolean(aiAnswer)} loading={aiLoading} />
 
                                 <div className="grid gap-4 md:grid-cols-2">
                                     <StudyPanel title={activeTab} section={activeSection} answer={aiAnswer} loading={aiLoading} loadingStep={loadingStep} />
@@ -513,7 +522,28 @@ function Metric({ label, value }) {
     );
 }
 
-function DevotionalAudioPanel({ items = [], hasAnswer = false, loading = false }) {
+function PodcastAudioPanel({ episode = null, hasAnswer = false, loading = false }) {
+    const [copied, setCopied] = useState(false);
+    const [history, setHistory] = useState([]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        const stored = window.localStorage.getItem('biblia_abs_podcast_history');
+
+        if (!stored) {
+            return;
+        }
+
+        try {
+            setHistory(JSON.parse(stored).slice(0, 3));
+        } catch (error) {
+            setHistory([]);
+        }
+    }, []);
+
     if (!hasAnswer && !loading) {
         return null;
     }
@@ -522,24 +552,182 @@ function DevotionalAudioPanel({ items = [], hasAnswer = false, loading = false }
         return (
             <div className="rounded-md border border-[#dbeafe] bg-[#eff6ff] p-4">
                 <div className="flex items-center gap-2 text-sm font-semibold text-[#1e3a8a]">
-                    <Volume2 className="h-4 w-4" />
-                    Devocional em audio
+                    <Headphones className="h-4 w-4" />
+                    Modo podcast
                 </div>
                 <p className="mt-1 text-sm leading-6 text-[#1e40af]">
-                    Assim que os agentes concluirem, o estudo completo podera ser ouvido em sequencia.
+                    Assim que os agentes concluirem, o sistema montara um episodio devocional completo para ouvir em sequencia.
                 </p>
             </div>
         );
     }
 
+    const script = episode?.script ?? '';
+    const canCopy = typeof navigator !== 'undefined' && Boolean(navigator.clipboard);
+    const canShare = typeof navigator !== 'undefined' && Boolean(navigator.share);
+
+    function saveHistory() {
+        if (!episode?.title || typeof window === 'undefined') {
+            return;
+        }
+
+        const entry = {
+            title: episode.title,
+            reference: episode.reference,
+            duration: episode.durationLabel,
+            listenedAt: new Date().toISOString(),
+        };
+
+        setHistory((current) => {
+            const next = [entry, ...current.filter((item) => item.title !== entry.title)].slice(0, 3);
+            window.localStorage.setItem('biblia_abs_podcast_history', JSON.stringify(next));
+            return next;
+        });
+    }
+
+    async function copyScript() {
+        if (!script || !canCopy) {
+            return;
+        }
+
+        await navigator.clipboard.writeText(script);
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1800);
+    }
+
+    async function shareEpisode() {
+        if (!canShare || !episode) {
+            return;
+        }
+
+        await navigator.share({
+            title: episode.title,
+            text: script.slice(0, 1400),
+        });
+    }
+
     return (
-        <SpeechPlayer
-            title="Ouvir estudo completo"
-            description="Modo devocional: texto biblico e respostas dos agentes em uma leitura continua."
-            items={items}
-            emptyMessage="Gere uma resposta dos agentes para ouvir o estudo completo."
-        />
+        <div className="rounded-md border border-[#d8d7cf] bg-[#fafaf7] p-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                    <div className="flex items-center gap-2 text-sm font-semibold text-[#111827]">
+                        <Headphones className="h-4 w-4 text-[#2563eb]" />
+                        Modo podcast
+                    </div>
+                    <h3 className="mt-2 text-base font-semibold text-[#111827]">{episode?.title ?? 'Episodio devocional'}</h3>
+                    <p className="mt-1 text-sm leading-6 text-[#4b5563]">{episode?.description ?? 'Gere uma resposta dos agentes para montar o episodio completo.'}</p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                    <button
+                        type="button"
+                        onClick={copyScript}
+                        disabled={!script || !canCopy}
+                        className="inline-flex h-9 items-center rounded-md border border-[#d1d5db] bg-white px-3 text-sm font-semibold text-[#374151] transition hover:bg-[#f3f4f6] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        {copied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+                        {copied ? 'Copiado' : 'Copiar roteiro'}
+                    </button>
+                    {canShare && (
+                        <button
+                            type="button"
+                            onClick={shareEpisode}
+                            disabled={!script}
+                            className="inline-flex h-9 items-center rounded-md border border-[#d1d5db] bg-white px-3 text-sm font-semibold text-[#374151] transition hover:bg-[#f3f4f6] disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            <Share2 className="mr-2 h-4 w-4" />
+                            Compartilhar
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {episode && (
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-md border border-[#e5e7eb] bg-white px-3 py-2">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[#6b7280]">Referencia</p>
+                        <p className="mt-1 text-sm font-semibold text-[#111827]">{episode.reference}</p>
+                    </div>
+                    <div className="rounded-md border border-[#e5e7eb] bg-white px-3 py-2">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[#6b7280]">Duracao estimada</p>
+                        <p className="mt-1 text-sm font-semibold text-[#111827]">{episode.durationLabel}</p>
+                    </div>
+                    <div className="rounded-md border border-[#e5e7eb] bg-white px-3 py-2">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[#6b7280]">Blocos</p>
+                        <p className="mt-1 text-sm font-semibold text-[#111827]">{episode.items.length} secoes</p>
+                    </div>
+                </div>
+            )}
+
+            <div className="mt-4">
+                <SpeechPlayer
+                    title="Ouvir episodio completo"
+                    description="Podcast devocional: pergunta, texto biblico e respostas dos agentes em uma leitura continua."
+                    items={episode?.items ?? []}
+                    emptyMessage="Gere uma resposta dos agentes para ouvir o episodio completo."
+                    onStart={saveHistory}
+                />
+            </div>
+
+            {episode?.preview?.length > 0 && (
+                <details className="mt-4 rounded-md border border-[#e5e7eb] bg-white p-3">
+                    <summary className="cursor-pointer text-sm font-semibold text-[#111827]">Ver roteiro resumido</summary>
+                    <div className="mt-3 space-y-2 text-sm leading-6 text-[#4b5563]">
+                        {episode.preview.map((line, index) => (
+                            <p key={`${line}-${index}`}>{line}</p>
+                        ))}
+                    </div>
+                </details>
+            )}
+
+            {history.length > 0 && (
+                <div className="mt-4 rounded-md border border-[#e5e7eb] bg-white p-3">
+                    <p className="text-sm font-semibold text-[#111827]">Historico local de escuta</p>
+                    <div className="mt-2 space-y-2">
+                        {history.map((item) => (
+                            <div key={`${item.title}-${item.listenedAt}`} className="text-sm leading-5 text-[#4b5563]">
+                                <span className="font-medium text-[#111827]">{item.title}</span>
+                                <span className="block text-xs text-[#6b7280]">{item.duration} • {formatDate(item.listenedAt)}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
     );
+}
+
+function buildPodcastEpisode({ reference = '', items = [], answer = null }) {
+    const readableItems = items
+        .map((item) => ({
+            reference: item.reference ?? '',
+            text: normalizeSpeechText(item.text ?? ''),
+        }))
+        .filter((item) => item.text);
+
+    if (readableItems.length === 0) {
+        return null;
+    }
+
+    const question = normalizeSpeechText(answer?.question ?? '');
+    const titleBase = question ? question.replace(/[?.!]+$/, '') : `Estudo de ${reference || readableItems[0].reference}`;
+    const title = `Podcast devocional: ${titleBase}`;
+    const wordCount = readableItems.reduce((total, item) => total + item.text.split(/\s+/).filter(Boolean).length, 0);
+    const estimatedMinutes = Math.max(1, Math.ceil(wordCount / 150));
+    const durationLabel = estimatedMinutes === 1 ? '1 minuto' : `${estimatedMinutes} minutos`;
+    const script = readableItems
+        .map((item) => `${item.reference}\n${item.text}`)
+        .join('\n\n');
+
+    return {
+        title,
+        reference: reference || readableItems[0]?.reference || 'Estudo biblico',
+        description: 'Episodio montado automaticamente com a pergunta, a passagem biblica e os blocos gerados pelos agentes IA.',
+        durationLabel,
+        items: readableItems,
+        script,
+        preview: readableItems.slice(0, 4).map((item) => `${item.reference}: ${item.text.slice(0, 220)}${item.text.length > 220 ? '...' : ''}`),
+    };
 }
 
 function buildDevotionalAudioItems({ reference = '', searchResults = [], answer = null }) {
@@ -591,6 +779,7 @@ function SpeechPlayer({
     items = [],
     emptyMessage = 'Nenhum texto disponivel para leitura.',
     compact = false,
+    onStart = null,
 }) {
     const synthRef = useRef(null);
     const stopRequestedRef = useRef(false);
@@ -709,6 +898,7 @@ function SpeechPlayer({
 
         stopRequestedRef.current = false;
         synthRef.current?.cancel();
+        onStart?.();
         speakAt(0);
     }
 
