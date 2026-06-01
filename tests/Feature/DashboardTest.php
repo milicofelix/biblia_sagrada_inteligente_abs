@@ -4,6 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\Bible\AiAnswer;
 use App\Models\Bible\AiQuestion;
+use App\Models\Bible\StudyNote;
+use App\Models\Bible\Verse;
+use Database\Seeders\Bible\BibleCatalogSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -24,7 +27,8 @@ class DashboardTest extends TestCase
                 ->has('stats.verses')
                 ->has('stats.notes')
                 ->has('stats.agentRuns')
-                ->has('recentAnswers'));
+                ->has('recentAnswers')
+                ->has('recentNotes'));
     }
 
     public function test_dashboard_lists_recent_ai_answers(): void
@@ -55,5 +59,32 @@ class DashboardTest extends TestCase
                 ->has('recentAnswers', 1)
                 ->where('recentAnswers.0.question', 'Como estudar perseveranca?')
                 ->where('recentAnswers.0.sections.0.title', 'Estudos'));
+    }
+
+    public function test_dashboard_lists_recent_study_notes(): void
+    {
+        $this->seed(BibleCatalogSeeder::class);
+        $this->artisan('bible:import', ['path' => 'tests/Fixtures/bible/sample-translation.json']);
+
+        $verse = Verse::query()
+            ->where('reference', 'Joao 3:16')
+            ->firstOrFail();
+
+        StudyNote::query()->create([
+            'verse_id' => $verse->id,
+            'title' => 'Nota em Joao 3:16',
+            'body' => 'Deus toma a iniciativa do amor.',
+            'visibility' => 'private',
+        ]);
+
+        $this
+            ->get('/')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard')
+                ->has('recentNotes', 1)
+                ->where('recentNotes.0.reference', 'Joao 3:16')
+                ->where('recentNotes.0.translation', 'TST')
+                ->where('recentNotes.0.body', 'Deus toma a iniciativa do amor.'));
     }
 }

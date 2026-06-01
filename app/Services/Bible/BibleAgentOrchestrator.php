@@ -19,7 +19,10 @@ class BibleAgentOrchestrator
     /**
      * @param  array<int, BibleAgent>  $agents
      */
-    public function __construct(private readonly array $agents = []) {}
+    public function __construct(
+        private readonly BibleContextResolver $contextResolver,
+        private readonly array $agents = [],
+    ) {}
 
     public static function default(): self
     {
@@ -135,21 +138,7 @@ class BibleAgentOrchestrator
      */
     private function findVerses(string $question): Collection
     {
-        $verses = Verse::query()
-            ->with(['translation:id,abbreviation'])
-            ->search($question)
-            ->limit(8)
-            ->get();
-
-        if ($verses->isNotEmpty()) {
-            return $verses;
-        }
-
-        return Verse::query()
-            ->with(['translation:id,abbreviation'])
-            ->latest('id')
-            ->limit(8)
-            ->get();
+        return $this->contextResolver->resolve($question, 10);
     }
 
     /**

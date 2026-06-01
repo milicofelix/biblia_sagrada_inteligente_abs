@@ -21,6 +21,23 @@ class BiblePassageLookup
             return collect();
         }
 
+        return $this->searchReference($reference, $limit);
+    }
+
+    /**
+     * @return Collection<int, Verse>
+     */
+    public function searchReference(ParsedBibleReference $reference, int $limit = 80): Collection
+    {
+        return $this->queryReference($reference)
+            ->orderBy('chapter_number')
+            ->orderBy('verse_number')
+            ->limit($limit)
+            ->get();
+    }
+
+    private function queryReference(ParsedBibleReference $reference): Builder
+    {
         return Verse::query()
             ->with(['translation:id,abbreviation', 'book:id,name'])
             ->where('book_id', $reference->book->id)
@@ -50,10 +67,6 @@ class BiblePassageLookup
                             ->where('verse_number', '<=', $reference->finalVerse());
                     });
                 }
-            })
-            ->orderBy('chapter_number')
-            ->orderBy('verse_number')
-            ->limit($limit)
-            ->get();
+            });
     }
 }

@@ -61,6 +61,23 @@ class AnswerQuestionTest extends TestCase
         Bus::assertDispatched(RunBibleAgents::class);
     }
 
+    public function test_answer_context_prioritizes_explicit_bible_references(): void
+    {
+        config([
+            'openai.api_key' => 'test-key',
+            'openai.model' => 'gpt-4.1-mini',
+        ]);
+
+        $this->seed(BibleCatalogSeeder::class);
+        $this->artisan('bible:import', ['path' => 'tests/Fixtures/bible/sample-translation.json']);
+
+        $answer = BibleAgentOrchestrator::default()
+            ->createPendingAnswer('Explique Joao 3:16 e conecte com perseveranca.');
+
+        $this->assertSame('Joao 3:16', $answer->citations[0]['reference']);
+        $this->assertContains('Romanos 5:3', collect($answer->citations)->pluck('reference'));
+    }
+
     public function test_agent_job_runs_agents_and_persists_answer(): void
     {
         config([

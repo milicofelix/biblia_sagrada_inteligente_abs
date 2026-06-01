@@ -9,6 +9,7 @@ import {
     ListChecks,
     MessageSquareText,
     NotebookPen,
+    Save,
     Send,
     Search,
     Sparkles,
@@ -62,12 +63,15 @@ export default function Dashboard({
     search = { term: '', results: [] },
     stats = {},
     recentAnswers = [],
+    recentNotes = [],
 }) {
     const [reference, setReference] = useState(initialReference);
     const [activeTab, setActiveTab] = useState(tabs[0].name);
+    const [statsState, setStatsState] = useState(stats);
     const [aiQuestion, setAiQuestion] = useState('Estou desanimado, existe algo na Biblia sobre perseveranca?');
     const [aiAnswer, setAiAnswer] = useState(null);
     const [answerHistory, setAnswerHistory] = useState(recentAnswers);
+    const [noteHistory, setNoteHistory] = useState(recentNotes);
     const [aiError, setAiError] = useState('');
     const [aiLoading, setAiLoading] = useState(false);
     const [loadingStep, setLoadingStep] = useState('Preparando o estudo');
@@ -78,8 +82,6 @@ export default function Dashboard({
 
         router.get('/buscar', { q: reference }, {
             preserveScroll: true,
-            preserveState: true,
-            only: [],
         });
     }
 
@@ -131,6 +133,44 @@ export default function Dashboard({
         }
 
         setAiLoading(false);
+    }
+
+    async function saveStudyNote(verseId, body) {
+        const response = await fetch(`/versiculos/${verseId}/notas`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+                Accept: 'application/json',
+            },
+            body: JSON.stringify({ body }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(data.message ?? 'Nao foi possivel salvar a nota.');
+        }
+
+        setStatsState((current) => ({
+            ...current,
+            notes: data.stats?.notes ?? current.notes,
+        }));
+        setNoteHistory((current) => [
+            data.note,
+            ...current.filter((note) => note.id !== data.note.id),
+        ].slice(0, 6));
+
+        return data.note;
+    }
+
+    function openNote(note) {
+        if (note.reference) {
+            setReference(note.reference);
+            router.get('/buscar', { q: note.reference }, {
+                preserveScroll: true,
+            });
+        }
     }
 
     function openAnswer(answer) {
@@ -218,10 +258,10 @@ export default function Dashboard({
                         </div>
 
                         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                            <Metric label="Livros catalogados" value={stats.books ?? 0} />
-                            <Metric label="Versiculos indexados" value={stats.verses ?? 0} />
-                            <Metric label="Notas de estudo" value={stats.notes ?? 0} />
-                            <Metric label="Execucoes de agentes" value={stats.agentRuns ?? 0} />
+                            <Metric label="Livros catalogados" value={statsState.books ?? 0} />
+                            <Metric label="Versiculos indexados" value={statsState.verses ?? 0} />
+                            <Metric label="Notas de estudo" value={statsState.notes ?? 0} />
+                            <Metric label="Execucoes de agentes" value={statsState.agentRuns ?? 0} />
                         </div>
                     </div>
                 </section>
@@ -243,17 +283,7 @@ export default function Dashboard({
                                 {search.results?.length > 0 ? (
                                     <div className="space-y-4">
                                         {search.results.map((result) => (
-                                            <article key={result.id} className="rounded-md border border-[#e4e2da] p-4">
-                                                <div className="flex flex-wrap items-center gap-2">
-                                                    <h3 className="text-sm font-semibold text-[#111827]">{result.reference}</h3>
-                                                    {result.translation && (
-                                                        <span className="rounded-md bg-[#eef2ff] px-2 py-0.5 text-xs font-medium text-[#3730a3]">
-                                                            {result.translation}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <p className="mt-3 text-base leading-8 text-[#374151]">{result.text}</p>
-                                            </article>
+                                            <VerseResult key={result.id} result={result} onSaveNote={saveStudyNote} />
                                         ))}
                                     </div>
                                 ) : (
@@ -400,6 +430,40 @@ export default function Dashboard({
                                 </p>
                             )}
                         </div>
+
+                        <div className="rounded-md border border-[#d8d7cf] bg-white">
+                            <div className="flex items-center gap-2 border-b border-[#e4e2da] px-4 py-3">
+                                <NotebookPen className="h-4 w-4 text-[#2563eb]" />
+                                <h2 className="text-base font-semibold text-[#111827]">Caderno</h2>
+                            </div>
+                            {noteHistory.length > 0 ? (
+                                <div className="divide-y divide-[#ecebe4]">
+                                    {noteHistory.map((note) => (
+                                        <button
+                                            key={note.id}
+                                            type="button"
+                                            onClick={() => openNote(note)}
+                                            className="block w-full px-4 py-3 text-left transition hover:bg-[#f9fafb]"
+                                        >
+                                            <span className="text-sm font-semibold text-[#111827]">{note.reference}</span>
+                                            {note.translation && (
+                                                <span className="ml-2 rounded-md bg-[#eef2ff] px-2 py-0.5 text-xs font-medium text-[#3730a3]">
+                                                    {note.translation}
+                                                </span>
+                                            )}
+                                            <span className="mt-2 line-clamp-3 block text-sm leading-5 text-[#4b5563]">
+                                                {note.body}
+                                            </span>
+                                            <span className="mt-1 block text-xs text-[#6b7280]">{formatDate(note.createdAt)}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="px-4 py-4 text-sm leading-6 text-[#6b7280]">
+                                    Suas notas salvas aparecerao aqui.
+                                </p>
+                            )}
+                        </div>
                     </aside>
                 </section>
             </main>
@@ -424,6 +488,74 @@ function Metric({ label, value }) {
             <p className="text-sm text-[#6b7280]">{label}</p>
             <p className="mt-1 text-2xl font-semibold text-[#111827]">{value}</p>
         </div>
+    );
+}
+
+function VerseResult({ result, onSaveNote }) {
+    const [noteBody, setNoteBody] = useState(result.latestNote?.body ?? '');
+    const [noteStatus, setNoteStatus] = useState(result.latestNote ? 'Salva' : '');
+    const [saving, setSaving] = useState(false);
+
+    async function submitNote(event) {
+        event.preventDefault();
+
+        const body = noteBody.trim();
+
+        if (!body) {
+            setNoteStatus('Digite uma nota antes de salvar.');
+            return;
+        }
+
+        setSaving(true);
+        setNoteStatus('');
+
+        try {
+            await onSaveNote(result.id, body);
+            setNoteStatus('Nota salva');
+        } catch (error) {
+            setNoteStatus(error.message);
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    return (
+        <article className="rounded-md border border-[#e4e2da] p-4">
+            <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-sm font-semibold text-[#111827]">{result.reference}</h3>
+                {result.translation && (
+                    <span className="rounded-md bg-[#eef2ff] px-2 py-0.5 text-xs font-medium text-[#3730a3]">
+                        {result.translation}
+                    </span>
+                )}
+            </div>
+            <p className="mt-3 text-base leading-8 text-[#374151]">{result.text}</p>
+
+            <form onSubmit={submitNote} className="mt-4 rounded-md border border-[#e5e7eb] bg-[#fafaf7] p-3">
+                <label className="flex items-center gap-2 text-sm font-semibold text-[#111827]">
+                    <NotebookPen className="h-4 w-4 text-[#2563eb]" />
+                    Nota de estudo
+                </label>
+                <textarea
+                    value={noteBody}
+                    onChange={(event) => setNoteBody(event.target.value)}
+                    rows="3"
+                    placeholder="Escreva uma observacao, aplicacao ou pergunta sobre este versiculo."
+                    className="mt-3 w-full resize-none rounded-md border border-[#d1d5db] bg-white px-3 py-2 text-sm leading-6 text-[#111827] outline-none transition placeholder:text-[#9ca3af] focus:border-[#2563eb] focus:ring-2 focus:ring-[#bfdbfe]"
+                />
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <button
+                        type="submit"
+                        disabled={saving}
+                        className="inline-flex h-9 items-center rounded-md bg-[#111827] px-3 text-sm font-semibold text-white transition hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                        {saving ? 'Salvando...' : 'Salvar nota'}
+                        <Save className="ml-2 h-4 w-4" />
+                    </button>
+                    {noteStatus && <span className="text-sm text-[#4b5563]">{noteStatus}</span>}
+                </div>
+            </form>
+        </article>
     );
 }
 
