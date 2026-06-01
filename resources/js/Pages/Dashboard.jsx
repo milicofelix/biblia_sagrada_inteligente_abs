@@ -80,6 +80,11 @@ export default function Dashboard({
     const [aiLoading, setAiLoading] = useState(false);
     const [loadingStep, setLoadingStep] = useState('Preparando o estudo');
     const activeSection = aiAnswer?.sections?.find((section) => section.agent === tabs.find((tab) => tab.name === activeTab)?.agent);
+    const devotionalAudioItems = useMemo(() => buildDevotionalAudioItems({
+        reference,
+        searchResults: search.results ?? [],
+        answer: aiAnswer,
+    }), [reference, search.results, aiAnswer]);
 
     function submit(event) {
         event.preventDefault();
@@ -333,8 +338,11 @@ export default function Dashboard({
                                 })}
                             </div>
 
-                            <div className="grid gap-4 px-5 py-5 md:grid-cols-2">
-                                <StudyPanel title={activeTab} section={activeSection} answer={aiAnswer} loading={aiLoading} loadingStep={loadingStep} />
+                            <div className="space-y-4 px-5 py-5">
+                                <DevotionalAudioPanel items={devotionalAudioItems} hasAnswer={Boolean(aiAnswer)} loading={aiLoading} />
+
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    <StudyPanel title={activeTab} section={activeSection} answer={aiAnswer} loading={aiLoading} loadingStep={loadingStep} />
                                 <div className="rounded-md border border-[#e4e2da] bg-[#fafaf7] p-4">
                                     <div className="flex items-center gap-2 text-sm font-semibold text-[#111827]">
                                         <Sparkles className="h-4 w-4 text-[#2563eb]" />
@@ -357,6 +365,7 @@ export default function Dashboard({
                                 </div>
                             </div>
                         </div>
+                    </div>
                     </div>
 
                     <aside className="space-y-4">
@@ -504,7 +513,77 @@ function Metric({ label, value }) {
     );
 }
 
+function DevotionalAudioPanel({ items = [], hasAnswer = false, loading = false }) {
+    if (!hasAnswer && !loading) {
+        return null;
+    }
 
+    if (loading) {
+        return (
+            <div className="rounded-md border border-[#dbeafe] bg-[#eff6ff] p-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-[#1e3a8a]">
+                    <Volume2 className="h-4 w-4" />
+                    Devocional em audio
+                </div>
+                <p className="mt-1 text-sm leading-6 text-[#1e40af]">
+                    Assim que os agentes concluirem, o estudo completo podera ser ouvido em sequencia.
+                </p>
+            </div>
+        );
+    }
+
+    return (
+        <SpeechPlayer
+            title="Ouvir estudo completo"
+            description="Modo devocional: texto biblico e respostas dos agentes em uma leitura continua."
+            items={items}
+            emptyMessage="Gere uma resposta dos agentes para ouvir o estudo completo."
+        />
+    );
+}
+
+function buildDevotionalAudioItems({ reference = '', searchResults = [], answer = null }) {
+    const items = [];
+
+    if (answer?.question) {
+        items.push({
+            reference: 'Pergunta do estudo',
+            text: answer.question,
+        });
+    }
+
+    const bibleItems = searchResults
+        .map((result) => ({
+            reference: result.reference ?? reference,
+            text: result.text ?? '',
+        }))
+        .filter((item) => normalizeSpeechText(item.text));
+
+    if (bibleItems.length > 0) {
+        items.push({
+            reference: 'Texto biblico',
+            text: `Passagem base: ${reference || bibleItems[0].reference}.`,
+        });
+        items.push(...bibleItems);
+    }
+
+    const sections = answer?.sections ?? [];
+
+    tabs.forEach((tab) => {
+        const section = sections.find((item) => item.agent === tab.agent);
+
+        if (!section?.text) {
+            return;
+        }
+
+        items.push({
+            reference: tab.name,
+            text: section.text,
+        });
+    });
+
+    return items;
+}
 
 function SpeechPlayer({
     title = 'Leitor com audio do navegador',
