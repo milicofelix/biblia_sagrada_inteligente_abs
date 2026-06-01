@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Bible\Book;
 use App\Models\Bible\Chapter;
+use App\Models\Bible\CrossReference;
 use App\Models\Bible\Translation;
 use App\Models\Bible\Verse;
 use Database\Seeders\Bible\BibleCatalogSeeder;
@@ -146,5 +147,41 @@ class BibleImportTest extends TestCase
                 ->has('search.results', 2)
                 ->where('search.results.0.reference', 'Romanos 5:3')
                 ->where('search.results.1.reference', 'Romanos 5:4'));
+    }
+
+    public function test_search_page_includes_cross_references_for_results(): void
+    {
+        $this->seed(BibleCatalogSeeder::class);
+        $this->artisan('bible:import', ['path' => 'tests/Fixtures/bible/sample-translation.json']);
+
+        $source = Verse::query()->where('reference', 'Joao 3:16')->firstOrFail();
+        $target = Verse::query()->where('reference', 'Romanos 5:3')->firstOrFail();
+
+        CrossReference::query()->create([
+            'source_verse_id' => $source->id,
+            'target_verse_id' => $target->id,
+            'relationship' => 'perseveranca',
+            'notes' => 'O amor de Deus sustenta a perseveranca.',
+        ]);
+
+        $this
+            ->get('/buscar?q=Joao%203%3A16')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Dashboard')
+                ->where('search.results.0.reference', 'Joao 3:16')
+                ->has('search.results.0.crossReferences', 1)
+                ->where('search.results.0.crossReferences.0.reference', 'Romanos 5:3')
+                ->where('search.results.0.crossReferences.0.relationship', 'perseveranca'));
+
+        $this
+            ->get('/buscar?q=Romanos%205%3A3')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Dashboard')
+                ->where('search.results.0.reference', 'Romanos 5:3')
+                ->has('search.results.0.crossReferences', 1)
+                ->where('search.results.0.crossReferences.0.reference', 'Joao 3:16')
+                ->where('search.results.0.crossReferences.0.direction', 'incoming'));
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Bible;
 
 use App\Http\Controllers\Controller;
+use App\Models\Bible\CrossReference;
 use App\Models\Bible\StudyNote;
 use App\Models\Bible\Verse;
 use App\Services\Bible\References\BiblePassageLookup;
@@ -30,7 +31,12 @@ class SearchController extends Controller
             }
 
             $results = $verses
-                ->load(['notes', 'favorites'])
+                ->load([
+                    'notes',
+                    'favorites',
+                    'outgoingCrossReferences.targetVerse.translation',
+                    'incomingCrossReferences.sourceVerse.translation',
+                ])
                 ->map(fn (Verse $verse): array => $this->serializeVerse($verse))
                 ->all();
         }
@@ -54,6 +60,7 @@ class SearchController extends Controller
             'translation' => $verse->translation?->abbreviation,
             'book' => $verse->book?->name,
             'isFavorited' => $verse->favorites->isNotEmpty(),
+            'crossReferences' => $this->serializeCrossReferences($verse),
             'latestNote' => $verse->notes
                 ->sortByDesc('created_at')
                 ->map(fn (StudyNote $note): array => [
@@ -63,6 +70,46 @@ class SearchController extends Controller
                     'createdAt' => $note->created_at?->toISOString(),
                 ])
                 ->first(),
+        ];
+    }
+
+    private function serializeCrossReferences(Verse $verse): array
+    {
+        $outgoing = $verse->outgoingCrossReferences
+            ->map(fn (CrossReference $reference): array => $this->serializeCrossReference(
+                reference: $reference,
+                relatedVerse: $reference->targetVerse,
+                direction: 'outgoing',
+            ));
+
+        $incoming = $verse->incomingCrossReferences
+            ->map(fn (CrossReference $reference): array => $this->serializeCrossReference(
+                reference: $reference,
+                relatedVerse: $reference->sourceVerse,
+                direction: 'incoming',
+            ));
+
+        return $outgoing
+            ->toBase()
+            ->merge($incoming->toBase())
+            ->filter(fn (array $reference): bool => filled($reference['reference']))
+            ->unique('verseId')
+            ->take(8)
+            ->values()
+            ->all();
+    }
+
+    private function serializeCrossReference(CrossReference $reference, ?Verse $relatedVerse, string $direction): array
+    {
+        return [
+            'id' => $reference->id,
+            'verseId' => $relatedVerse?->id,
+            'reference' => $relatedVerse?->reference,
+            'text' => $relatedVerse?->text,
+            'translation' => $relatedVerse?->translation?->abbreviation,
+            'relationship' => $reference->relationship,
+            'notes' => $reference->notes,
+            'direction' => $direction,
         ];
     }
 }

@@ -49,6 +49,16 @@ class Verse extends Model
         return $this->hasMany(VerseFavorite::class, 'verse_id');
     }
 
+    public function outgoingCrossReferences(): HasMany
+    {
+        return $this->hasMany(CrossReference::class, 'source_verse_id');
+    }
+
+    public function incomingCrossReferences(): HasMany
+    {
+        return $this->hasMany(CrossReference::class, 'target_verse_id');
+    }
+
     public function scopeSearch(Builder $query, string $term): Builder
     {
         $driver = $query->getModel()->getConnection()->getDriverName();

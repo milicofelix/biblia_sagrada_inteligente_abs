@@ -1,7 +1,7 @@
 import type { FormEvent } from 'react';
 import { useState } from 'react';
 
-import { NotebookPen, Save, Star } from 'lucide-react';
+import { GitBranch, NotebookPen, Save, Star } from 'lucide-react';
 
 import type { StudyNote, VerseResultData } from '../../types/dashboard';
 
@@ -9,9 +9,10 @@ type VerseResultProps = {
     result: VerseResultData;
     onSaveNote: (verseId: number, body: string) => Promise<StudyNote>;
     onToggleFavorite: (verseId: number) => Promise<boolean>;
+    onOpenReference: (reference: string) => void;
 };
 
-export function VerseResult({ result, onSaveNote, onToggleFavorite }: VerseResultProps) {
+export function VerseResult({ result, onSaveNote, onToggleFavorite, onOpenReference }: VerseResultProps) {
     const [noteBody, setNoteBody] = useState(result.latestNote?.body ?? '');
     const [noteStatus, setNoteStatus] = useState(result.latestNote ? 'Salva' : '');
     const [favorited, setFavorited] = useState(Boolean(result.isFavorited));
@@ -84,6 +85,31 @@ export function VerseResult({ result, onSaveNote, onToggleFavorite }: VerseResul
             </div>
             <p className="mt-3 text-base leading-8 text-[#374151]">{result.text}</p>
             {favoriteStatus && <p className="mt-2 text-sm text-[#4b5563]">{favoriteStatus}</p>}
+
+            {result.crossReferences && result.crossReferences.length > 0 && (
+                <div className="mt-4 rounded-md border border-[#e4e2da] bg-[#fafaf7] p-3">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-[#111827]">
+                        <GitBranch className="h-4 w-4 text-[#2f5d3a]" />
+                        Referencias relacionadas
+                    </div>
+                    <div className="mt-3 grid gap-2">
+                        {result.crossReferences.map((reference) => (
+                            <button
+                                key={`${reference.id}-${reference.reference}`}
+                                type="button"
+                                onClick={() => reference.reference && onOpenReference(reference.reference)}
+                                className="rounded-md border border-[#e5e7eb] bg-white px-3 py-2 text-left transition hover:border-[#2f5d3a] hover:bg-[#f8faf7]"
+                            >
+                                <span className="block text-sm font-semibold text-[#111827]">{reference.reference}</span>
+                                {reference.text && <span className="mt-1 line-clamp-2 block text-sm leading-6 text-[#4b5563]">{reference.text}</span>}
+                                <span className="mt-1 block text-xs font-semibold uppercase text-[#6b7280]">
+                                    {reference.relationship ?? 'related'}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             <form onSubmit={submitNote} className="mt-4 rounded-md border border-[#e5e7eb] bg-[#fafaf7] p-3">
                 <label className="flex items-center gap-2 text-sm font-semibold text-[#111827]">

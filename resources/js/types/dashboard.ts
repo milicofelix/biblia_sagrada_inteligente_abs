@@ -15,7 +15,19 @@ export type VerseResultData = {
     translation?: string | null;
     book?: string | null;
     isFavorited?: boolean;
+    crossReferences?: BibleCrossReference[];
     latestNote?: StudyNote | null;
+};
+
+export type BibleCrossReference = {
+    id: number;
+    verseId?: number | null;
+    reference?: string | null;
+    text?: string | null;
+    translation?: string | null;
+    relationship?: string | null;
+    notes?: string | null;
+    direction?: 'outgoing' | 'incoming' | string;
 };
 
 export type VerseFavorite = {

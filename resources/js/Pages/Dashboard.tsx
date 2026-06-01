@@ -24,6 +24,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { FavoritesCard, HistoryCard, NotesCard, ReadingPlanCard } from '../Components/Dashboard/LibraryCards';
 import { DashboardSidebar } from '../Components/Dashboard/Sidebar';
+import { StudyTools } from '../Components/Dashboard/StudyTools';
 import { TopBar } from '../Components/Dashboard/TopBar';
 import { VerseResult } from '../Components/Dashboard/VerseResult';
 import type { DashboardProps, ReadingPlan } from '../types/dashboard';
@@ -251,11 +252,14 @@ export default function Dashboard({
 
     function openNote(note) {
         if (note.reference) {
-            setReference(note.reference);
-            router.get('/buscar', { q: note.reference }, {
-                preserveScroll: true,
-            });
+            openReference(note.reference);
         }
+    }
+
+    function openReference(nextReference: string) {
+        setReference(nextReference);
+
+        window.location.assign(`/buscar?q=${encodeURIComponent(nextReference)}`);
     }
 
     function openAnswer(answer) {
@@ -364,6 +368,7 @@ export default function Dashboard({
                                                     result={result}
                                                     onSaveNote={saveStudyNote}
                                                     onToggleFavorite={toggleFavorite}
+                                                    onOpenReference={openReference}
                                                 />
                                             ))}
                                         </div>
@@ -1056,6 +1061,7 @@ function StudyPanel({ title, section, answer, loading, loadingStep }) {
                         ))}
                     </div>
                 )}
+                {section.agent === 'study' && <StudyTools text={section.text} />}
             </div>
         );
     }
