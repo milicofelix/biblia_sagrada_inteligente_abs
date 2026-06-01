@@ -44,6 +44,11 @@ class Verse extends Model
         return $this->hasMany(StudyNote::class, 'verse_id');
     }
 
+    public function favorites(): HasMany
+    {
+        return $this->hasMany(VerseFavorite::class, 'verse_id');
+    }
+
     public function scopeSearch(Builder $query, string $term): Builder
     {
         $driver = $query->getModel()->getConnection()->getDriverName();

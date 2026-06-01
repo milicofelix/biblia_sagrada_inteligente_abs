@@ -30,7 +30,7 @@ class SearchController extends Controller
             }
 
             $results = $verses
-                ->load('notes')
+                ->load(['notes', 'favorites'])
                 ->map(fn (Verse $verse): array => $this->serializeVerse($verse))
                 ->all();
         }
@@ -53,6 +53,7 @@ class SearchController extends Controller
             'text' => $verse->text,
             'translation' => $verse->translation?->abbreviation,
             'book' => $verse->book?->name,
+            'isFavorited' => $verse->favorites->isNotEmpty(),
             'latestNote' => $verse->notes
                 ->sortByDesc('created_at')
                 ->map(fn (StudyNote $note): array => [

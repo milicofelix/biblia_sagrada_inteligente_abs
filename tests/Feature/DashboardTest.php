@@ -6,6 +6,7 @@ use App\Models\Bible\AiAnswer;
 use App\Models\Bible\AiQuestion;
 use App\Models\Bible\StudyNote;
 use App\Models\Bible\Verse;
+use App\Models\Bible\VerseFavorite;
 use Database\Seeders\Bible\BibleCatalogSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -26,9 +27,12 @@ class DashboardTest extends TestCase
                 ->has('stats.books')
                 ->has('stats.verses')
                 ->has('stats.notes')
+                ->has('stats.favorites')
                 ->has('stats.agentRuns')
                 ->has('recentAnswers')
-                ->has('recentNotes'));
+                ->has('recentNotes')
+                ->has('recentFavorites')
+                ->where('activeReadingPlan', null));
     }
 
     public function test_dashboard_lists_recent_ai_answers(): void
@@ -86,5 +90,30 @@ class DashboardTest extends TestCase
                 ->where('recentNotes.0.reference', 'Joao 3:16')
                 ->where('recentNotes.0.translation', 'TST')
                 ->where('recentNotes.0.body', 'Deus toma a iniciativa do amor.'));
+    }
+
+    public function test_dashboard_lists_recent_favorites_and_default_reading_plan(): void
+    {
+        $this->seed(BibleCatalogSeeder::class);
+        $this->artisan('bible:import', ['path' => 'tests/Fixtures/bible/sample-translation.json']);
+
+        $verse = Verse::query()
+            ->where('reference', 'Joao 3:16')
+            ->firstOrFail();
+
+        VerseFavorite::query()->create([
+            'verse_id' => $verse->id,
+        ]);
+
+        $this
+            ->get('/')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard')
+                ->where('stats.favorites', 1)
+                ->has('recentFavorites', 1)
+                ->where('recentFavorites.0.reference', 'Joao 3:16')
+                ->where('activeReadingPlan.name', 'Novo Testamento em 90 dias')
+                ->where('activeReadingPlan.currentDay.dayNumber', 1));
     }
 }

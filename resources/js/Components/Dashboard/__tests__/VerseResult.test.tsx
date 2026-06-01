@@ -19,8 +19,9 @@ describe('VerseResult', () => {
             reference: 'Joao 3:16',
             body: 'Deus toma a iniciativa do amor.',
         });
+        const onToggleFavorite = vi.fn().mockResolvedValue(true);
 
-        render(<VerseResult result={verse} onSaveNote={onSaveNote} />);
+        render(<VerseResult result={verse} onSaveNote={onSaveNote} onToggleFavorite={onToggleFavorite} />);
 
         await user.type(screen.getByPlaceholderText('Escreva uma observacao, aplicacao ou pergunta sobre este versiculo.'), 'Deus toma a iniciativa do amor.');
         await user.click(screen.getByRole('button', { name: /Salvar nota/i }));
@@ -32,12 +33,31 @@ describe('VerseResult', () => {
     it('orienta o usuario quando tenta salvar uma nota vazia', async () => {
         const user = userEvent.setup();
         const onSaveNote = vi.fn();
+        const onToggleFavorite = vi.fn().mockResolvedValue(true);
 
-        render(<VerseResult result={verse} onSaveNote={onSaveNote} />);
+        render(<VerseResult result={verse} onSaveNote={onSaveNote} onToggleFavorite={onToggleFavorite} />);
 
         await user.click(screen.getByRole('button', { name: /Salvar nota/i }));
 
         expect(screen.getByText('Digite uma nota antes de salvar.')).toBeInTheDocument();
         expect(onSaveNote).not.toHaveBeenCalled();
+    });
+
+    it('alterna o estado de favorito do versiculo', async () => {
+        const user = userEvent.setup();
+        const onSaveNote = vi.fn().mockResolvedValue({
+            id: 1,
+            reference: 'Joao 3:16',
+            body: 'Deus toma a iniciativa do amor.',
+        });
+        const onToggleFavorite = vi.fn().mockResolvedValue(true);
+
+        render(<VerseResult result={verse} onSaveNote={onSaveNote} onToggleFavorite={onToggleFavorite} />);
+
+        await user.click(screen.getByRole('button', { name: /Favoritar/i }));
+
+        expect(onToggleFavorite).toHaveBeenCalledWith(16);
+        expect(await screen.findByText('Adicionado aos favoritos')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Favorito/i })).toBeInTheDocument();
     });
 });

@@ -1,19 +1,23 @@
 import type { FormEvent } from 'react';
 import { useState } from 'react';
 
-import { NotebookPen, Save } from 'lucide-react';
+import { NotebookPen, Save, Star } from 'lucide-react';
 
 import type { StudyNote, VerseResultData } from '../../types/dashboard';
 
 type VerseResultProps = {
     result: VerseResultData;
     onSaveNote: (verseId: number, body: string) => Promise<StudyNote>;
+    onToggleFavorite: (verseId: number) => Promise<boolean>;
 };
 
-export function VerseResult({ result, onSaveNote }: VerseResultProps) {
+export function VerseResult({ result, onSaveNote, onToggleFavorite }: VerseResultProps) {
     const [noteBody, setNoteBody] = useState(result.latestNote?.body ?? '');
     const [noteStatus, setNoteStatus] = useState(result.latestNote ? 'Salva' : '');
+    const [favorited, setFavorited] = useState(Boolean(result.isFavorited));
+    const [favoriteStatus, setFavoriteStatus] = useState('');
     const [saving, setSaving] = useState(false);
+    const [favoriteLoading, setFavoriteLoading] = useState(false);
 
     async function submitNote(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -38,17 +42,48 @@ export function VerseResult({ result, onSaveNote }: VerseResultProps) {
         }
     }
 
+    async function toggleFavorite() {
+        setFavoriteLoading(true);
+        setFavoriteStatus('');
+
+        try {
+            const nextFavorited = await onToggleFavorite(result.id);
+            setFavorited(nextFavorited);
+            setFavoriteStatus(nextFavorited ? 'Adicionado aos favoritos' : 'Removido dos favoritos');
+        } catch (error) {
+            setFavoriteStatus(error instanceof Error ? error.message : 'Nao foi possivel atualizar o favorito.');
+        } finally {
+            setFavoriteLoading(false);
+        }
+    }
+
     return (
         <article className="rounded-md border border-[#e4e2da] p-4">
-            <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-sm font-semibold text-[#111827]">{result.reference}</h3>
-                {result.translation && (
-                    <span className="rounded-md bg-[#eef2ff] px-2 py-0.5 text-xs font-medium text-[#3730a3]">
-                        {result.translation}
-                    </span>
-                )}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-sm font-semibold text-[#111827]">{result.reference}</h3>
+                    {result.translation && (
+                        <span className="rounded-md bg-[#eef2ff] px-2 py-0.5 text-xs font-medium text-[#3730a3]">
+                            {result.translation}
+                        </span>
+                    )}
+                </div>
+                <button
+                    type="button"
+                    onClick={toggleFavorite}
+                    disabled={favoriteLoading}
+                    className={`inline-flex h-8 items-center rounded-md border px-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-70 ${
+                        favorited
+                            ? 'border-[#facc15] bg-[#fefce8] text-[#a16207]'
+                            : 'border-[#d1d5db] bg-white text-[#4b5563] hover:bg-[#f9fafb]'
+                    }`}
+                >
+                    <Star className={`mr-1.5 h-4 w-4 ${favorited ? 'fill-[#facc15]' : ''}`} />
+                    {favorited ? 'Favorito' : 'Favoritar'}
+                </button>
             </div>
             <p className="mt-3 text-base leading-8 text-[#374151]">{result.text}</p>
+            {favoriteStatus && <p className="mt-2 text-sm text-[#4b5563]">{favoriteStatus}</p>}
 
             <form onSubmit={submitNote} className="mt-4 rounded-md border border-[#e5e7eb] bg-[#fafaf7] p-3">
                 <label className="flex items-center gap-2 text-sm font-semibold text-[#111827]">

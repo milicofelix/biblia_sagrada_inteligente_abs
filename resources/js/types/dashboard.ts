@@ -4,6 +4,7 @@ export type DashboardStats = {
     books?: number;
     verses?: number;
     notes?: number;
+    favorites?: number;
     agentRuns?: number;
 };
 
@@ -13,7 +14,35 @@ export type VerseResultData = {
     text: string;
     translation?: string | null;
     book?: string | null;
+    isFavorited?: boolean;
     latestNote?: StudyNote | null;
+};
+
+export type VerseFavorite = {
+    id: number;
+    verseId: number;
+    reference?: string | null;
+    text?: string | null;
+    translation?: string | null;
+    createdAt?: string | null;
+};
+
+export type ReadingPlanDay = {
+    id: number;
+    dayNumber: number;
+    title: string;
+    reference: string;
+    completedAt?: string | null;
+};
+
+export type ReadingPlan = {
+    id: number;
+    name: string;
+    description?: string | null;
+    daysCount: number;
+    completedDays: number;
+    progressPercent: number;
+    currentDay?: ReadingPlanDay | null;
 };
 
 export type StudyNote = {
@@ -68,6 +97,8 @@ export type DashboardProps = {
     stats?: DashboardStats;
     recentAnswers?: AiAnswer[];
     recentNotes?: StudyNote[];
+    recentFavorites?: VerseFavorite[];
+    activeReadingPlan?: ReadingPlan | null;
 };
 
 export type NavigationItem = {

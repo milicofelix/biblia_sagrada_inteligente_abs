@@ -22,11 +22,11 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { HistoryCard, NotesCard } from '../Components/Dashboard/LibraryCards';
+import { FavoritesCard, HistoryCard, NotesCard, ReadingPlanCard } from '../Components/Dashboard/LibraryCards';
 import { DashboardSidebar } from '../Components/Dashboard/Sidebar';
 import { TopBar } from '../Components/Dashboard/TopBar';
 import { VerseResult } from '../Components/Dashboard/VerseResult';
-import type { DashboardProps } from '../types/dashboard';
+import type { DashboardProps, ReadingPlan } from '../types/dashboard';
 import { formatDate } from '../utils/date';
 
 const agents = [
@@ -77,6 +77,8 @@ export default function Dashboard({
     stats = {},
     recentAnswers = [],
     recentNotes = [],
+    recentFavorites = [],
+    activeReadingPlan = null,
 }: DashboardProps) {
     const [reference, setReference] = useState(initialReference);
     const [activeTab, setActiveTab] = useState(tabs[0].name);
@@ -85,6 +87,8 @@ export default function Dashboard({
     const [aiAnswer, setAiAnswer] = useState(null);
     const [answerHistory, setAnswerHistory] = useState(recentAnswers);
     const [noteHistory, setNoteHistory] = useState(recentNotes);
+    const [favoriteHistory, setFavoriteHistory] = useState(recentFavorites);
+    const [readingPlan, setReadingPlan] = useState<ReadingPlan | null>(activeReadingPlan);
     const [aiError, setAiError] = useState('');
     const [aiLoading, setAiLoading] = useState(false);
     const [loadingStep, setLoadingStep] = useState('Preparando o estudo');
@@ -187,6 +191,64 @@ export default function Dashboard({
         return data.note;
     }
 
+    async function toggleFavorite(verseId: number): Promise<boolean> {
+        const response = await fetch(`/versiculos/${verseId}/favorito`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '',
+                Accept: 'application/json',
+            },
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(data.message ?? 'Nao foi possivel atualizar o favorito.');
+        }
+
+        setStatsState((current) => ({
+            ...current,
+            favorites: data.stats?.favorites ?? current.favorites,
+        }));
+
+        if (data.favorited && data.favorite) {
+            setFavoriteHistory((current) => [
+                data.favorite,
+                ...current.filter((favorite) => favorite.verseId !== data.favorite.verseId),
+            ].slice(0, 6));
+        } else {
+            setFavoriteHistory((current) => current.filter((favorite) => favorite.verseId !== verseId));
+        }
+
+        return Boolean(data.favorited);
+    }
+
+    async function completeReadingDay(dayId: number): Promise<ReadingPlan> {
+        const response = await fetch(`/planos-leitura/dias/${dayId}/concluir`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '',
+                Accept: 'application/json',
+            },
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(data.message ?? 'Nao foi possivel concluir a leitura.');
+        }
+
+        setReadingPlan(data.plan);
+
+        if (data.plan?.currentDay?.reference) {
+            setReference(data.plan.currentDay.reference);
+        }
+
+        return data.plan;
+    }
+
     function openNote(note) {
         if (note.reference) {
             setReference(note.reference);
@@ -247,7 +309,6 @@ export default function Dashboard({
 
     const primaryVerse = search.results?.[0] ?? null;
     const passageLabel = primaryVerse?.reference ?? reference;
-    const progressWidth = `${Math.min(100, Math.max(8, Math.round(((statsState.notes ?? 0) + 23) % 90)))}%`;
 
     return (
         <>
@@ -298,7 +359,12 @@ export default function Dashboard({
 
                                         <div className="verse-list">
                                             {search.results.slice(0, 3).map((result) => (
-                                                <VerseResult key={result.id} result={result} onSaveNote={saveStudyNote} />
+                                                <VerseResult
+                                                    key={result.id}
+                                                    result={result}
+                                                    onSaveNote={saveStudyNote}
+                                                    onToggleFavorite={toggleFavorite}
+                                                />
                                             ))}
                                         </div>
                                     </>
@@ -366,15 +432,7 @@ export default function Dashboard({
                         </div>
 
                         <aside className="right-library">
-                            <div className="library-card reading-plan-card">
-                                <h2>Plano de Leitura</h2>
-                                <p>O Novo Testamento em 90 dias</p>
-                                <div className="progress-track">
-                                    <span style={{ width: progressWidth }} />
-                                </div>
-                                <small>Dia 23 de 90</small>
-                                <button type="button">Continuar leitura</button>
-                            </div>
+                            <ReadingPlanCard plan={readingPlan} onCompleteDay={completeReadingDay} />
 
                             <div className="library-card verse-day-card">
                                 <div className="card-title-icon">
@@ -404,6 +462,7 @@ export default function Dashboard({
                                 </button>
                             </form>
 
+                            <FavoritesCard favorites={favoriteHistory} onOpenFavorite={openNote} />
                             <HistoryCard answers={answerHistory} onOpenAnswer={openAnswer} />
                             <NotesCard notes={noteHistory} onOpenNote={openNote} />
                         </aside>
