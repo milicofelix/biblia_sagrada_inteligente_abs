@@ -7,6 +7,7 @@ use App\Models\Bible\Chapter;
 use App\Models\Bible\CrossReference;
 use App\Models\Bible\Translation;
 use App\Models\Bible\Verse;
+use App\Models\User;
 use Database\Seeders\Bible\BibleCatalogSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -14,6 +15,13 @@ use Tests\TestCase;
 class BibleImportTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->actingAs(User::factory()->create());
+    }
 
     public function test_catalog_seeder_creates_books_and_chapters(): void
     {

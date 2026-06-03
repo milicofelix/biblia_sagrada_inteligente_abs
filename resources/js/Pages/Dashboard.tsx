@@ -82,6 +82,7 @@ export default function Dashboard({
     recentFavorites = [],
     activeReadingPlan = null,
     dailyVerse = null,
+    auth,
 }: DashboardProps) {
     const [reference, setReference] = useState(initialReference);
     const [activeTab, setActiveTab] = useState(tabs[0].name);
@@ -416,6 +417,7 @@ export default function Dashboard({
                 <section className="bible-main">
                     <TopBar
                         reference={reference}
+                        user={auth?.user}
                         onReferenceChange={setReference}
                         onSubmit={submit}
                         onReadingMode={() => scrollToPanel('bible-reader')}

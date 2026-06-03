@@ -32,6 +32,149 @@
 }
 
 @layer components {
+    .auth-shell {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: minmax(20rem, 1fr) minmax(24rem, 0.78fr);
+        background:
+            radial-gradient(circle at 20% 20%, rgba(168, 121, 39, 0.16), transparent 28rem),
+            linear-gradient(120deg, #f4ecdd 0%, #fffaf0 55%, #f7f7f4 100%);
+        color: #2b1f15;
+        font-family: Georgia, Cambria, 'Times New Roman', serif;
+    }
+
+    .auth-intro,
+    .auth-panel {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 3rem;
+    }
+
+    .auth-intro {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5rem;
+        border-right: 1px solid rgba(129, 91, 44, 0.16);
+    }
+
+    .auth-intro > * {
+        width: min(100%, 34rem);
+        margin-inline: auto;
+    }
+
+    .auth-verse {
+        margin: 0;
+        color: #49341f;
+        font-size: clamp(1.8rem, 4vw, 3.5rem);
+        line-height: 1.2;
+    }
+
+    .auth-intro span {
+        display: block;
+        margin-top: 1.25rem;
+        color: #8a6117;
+        font-family: var(--font-sans);
+        font-size: 0.86rem;
+        font-weight: 700;
+    }
+
+    .auth-panel-inner {
+        width: min(100%, 28rem);
+        padding: 2rem;
+        border: 1px solid rgba(129, 91, 44, 0.2);
+        border-radius: 0.55rem;
+        background: rgba(255, 251, 244, 0.82);
+        box-shadow: 0 22px 55px rgba(81, 53, 21, 0.12);
+    }
+
+    .auth-panel h1 {
+        margin: 0;
+        color: #3c2b1d;
+        font-size: 2rem;
+    }
+
+    .auth-panel h1 + p {
+        margin: 0.65rem 0 1.6rem;
+        color: #80664a;
+        font-family: var(--font-sans);
+        font-size: 0.9rem;
+        line-height: 1.55;
+    }
+
+    .auth-form,
+    .auth-field {
+        display: grid;
+        gap: 0.55rem;
+    }
+
+    .auth-form {
+        gap: 1rem;
+        font-family: var(--font-sans);
+    }
+
+    .auth-field span,
+    .auth-check {
+        color: #59452e;
+        font-size: 0.82rem;
+        font-weight: 700;
+    }
+
+    .auth-field input {
+        min-height: 2.8rem;
+        width: 100%;
+        border: 1px solid rgba(157, 116, 59, 0.34);
+        border-radius: 0.45rem;
+        outline: 0;
+        padding: 0 0.8rem;
+        background: rgba(255, 255, 255, 0.72);
+        color: #332316;
+    }
+
+    .auth-field input:focus {
+        border-color: #a87927;
+        box-shadow: 0 0 0 3px rgba(168, 121, 39, 0.12);
+    }
+
+    .auth-field small {
+        color: #a33b2b;
+        font-size: 0.76rem;
+    }
+
+    .auth-check {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 500;
+    }
+
+    .auth-form > button {
+        min-height: 2.8rem;
+        border: 0;
+        border-radius: 0.45rem;
+        background: linear-gradient(180deg, #a87927, #87580e);
+        color: #fff8e8;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .auth-form > button:disabled {
+        cursor: wait;
+        opacity: 0.65;
+    }
+
+    .auth-switch {
+        margin: 0.25rem 0 0;
+        color: #80664a;
+        font-size: 0.82rem;
+        text-align: center;
+    }
+
+    .auth-switch a {
+        color: #7d541a;
+        font-weight: 700;
+    }
+
     .bible-shell {
         min-height: 100vh;
         display: grid;
@@ -977,6 +1120,30 @@
     }
 
     @media (max-width: 700px) {
+        .auth-shell {
+            display: block;
+        }
+
+        .auth-intro {
+            min-height: auto;
+            gap: 1.5rem;
+            padding: 1.25rem;
+            border-right: 0;
+        }
+
+        .auth-verse,
+        .auth-intro span {
+            display: none;
+        }
+
+        .auth-panel {
+            padding: 0.75rem 1rem 2rem;
+        }
+
+        .auth-panel-inner {
+            padding: 1.25rem;
+        }
+
         .bible-sidebar {
             display: block;
             padding: 0.85rem 0.75rem 0.65rem;
@@ -1028,7 +1195,8 @@
         }
 
         .top-actions {
-            display: none;
+            display: flex;
+            justify-content: flex-end;
         }
 
         .open-book {

@@ -27,7 +27,7 @@ class AnswerQuestionController extends Controller
         }
 
         try {
-            $answer = BibleAgentOrchestrator::default()->createPendingAnswer($validated['question']);
+            $answer = BibleAgentOrchestrator::default()->createPendingAnswer($validated['question'], $request->user());
             RunBibleAgents::dispatch($answer->id);
         } catch (MissingOpenAiKeyException) {
             return response()->json([

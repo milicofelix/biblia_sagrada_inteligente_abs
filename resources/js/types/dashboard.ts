@@ -142,6 +142,15 @@ export type DashboardProps = {
     recentFavorites?: VerseFavorite[];
     activeReadingPlan?: ReadingPlan | null;
     dailyVerse?: DailyVerse | null;
+    auth?: {
+        user: AuthUser;
+    };
+};
+
+export type AuthUser = {
+    id: number;
+    name: string;
+    email: string;
 };
 
 export type NavigationItem = {

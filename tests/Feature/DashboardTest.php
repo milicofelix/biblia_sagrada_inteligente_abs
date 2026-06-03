@@ -7,6 +7,7 @@ use App\Models\Bible\AiQuestion;
 use App\Models\Bible\StudyNote;
 use App\Models\Bible\Verse;
 use App\Models\Bible\VerseFavorite;
+use App\Models\User;
 use Database\Seeders\Bible\BibleCatalogSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -15,6 +16,16 @@ use Tests\TestCase;
 class DashboardTest extends TestCase
 {
     use RefreshDatabase;
+
+    private User $user;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->user = User::factory()->create();
+        $this->actingAs($this->user);
+    }
 
     public function test_dashboard_renders_the_study_workspace(): void
     {
@@ -38,6 +49,7 @@ class DashboardTest extends TestCase
     public function test_dashboard_lists_recent_ai_answers(): void
     {
         $question = AiQuestion::query()->create([
+            'user_id' => $this->user->id,
             'question' => 'Como estudar perseveranca?',
             'intent' => 'biblical_study',
         ]);
@@ -75,6 +87,7 @@ class DashboardTest extends TestCase
             ->firstOrFail();
 
         StudyNote::query()->create([
+            'user_id' => $this->user->id,
             'verse_id' => $verse->id,
             'title' => 'Nota em Joao 3:16',
             'body' => 'Deus toma a iniciativa do amor.',
@@ -102,6 +115,7 @@ class DashboardTest extends TestCase
             ->firstOrFail();
 
         VerseFavorite::query()->create([
+            'user_id' => $this->user->id,
             'verse_id' => $verse->id,
         ]);
 

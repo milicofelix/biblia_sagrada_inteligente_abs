@@ -33,8 +33,8 @@ class SearchController extends Controller
 
             $results = $verses
                 ->load([
-                    'notes',
-                    'favorites',
+                    'notes' => fn ($query) => $query->whereBelongsTo($request->user()),
+                    'favorites' => fn ($query) => $query->whereBelongsTo($request->user()),
                     'outgoingCrossReferences.targetVerse.translation',
                     'incomingCrossReferences.sourceVerse.translation',
                 ])
@@ -48,7 +48,7 @@ class SearchController extends Controller
                 'term' => $term,
                 'results' => $results,
             ],
-            ...DashboardProps::make(),
+            ...DashboardProps::make($request->user()),
         ]);
     }
 

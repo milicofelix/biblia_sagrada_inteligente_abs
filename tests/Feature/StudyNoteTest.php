@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Bible\StudyNote;
 use App\Models\Bible\Verse;
+use App\Models\User;
 use Database\Seeders\Bible\BibleCatalogSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -11,6 +12,16 @@ use Tests\TestCase;
 class StudyNoteTest extends TestCase
 {
     use RefreshDatabase;
+
+    private User $user;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->user = User::factory()->create();
+        $this->actingAs($this->user);
+    }
 
     public function test_user_can_store_study_note_for_verse(): void
     {
@@ -26,6 +37,7 @@ class StudyNoteTest extends TestCase
             ->assertJsonPath('stats.notes', 1);
 
         $this->assertDatabaseHas('study_notes', [
+            'user_id' => $this->user->id,
             'verse_id' => $verse->id,
             'body' => 'Cristo e o centro da perseveranca.',
         ]);
@@ -36,6 +48,7 @@ class StudyNoteTest extends TestCase
         $verse = $this->importSampleBible();
 
         StudyNote::query()->create([
+            'user_id' => $this->user->id,
             'verse_id' => $verse->id,
             'title' => 'Nota em Joao 3:16',
             'body' => 'Deus toma a iniciativa do amor.',

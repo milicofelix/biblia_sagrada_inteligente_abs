@@ -6,6 +6,7 @@ use App\Models\Bible\Book;
 use App\Models\Bible\ReadingPlan;
 use App\Models\Bible\ReadingPlanDay;
 use App\Models\Bible\Verse;
+use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -13,9 +14,10 @@ class ReadingPlanBootstrapper
 {
     public const DEFAULT_SLUG = 'novo-testamento-90-dias';
 
-    public function defaultNewTestamentPlan(): ?ReadingPlan
+    public function defaultNewTestamentPlan(User $user): ?ReadingPlan
     {
         $plan = ReadingPlan::query()
+            ->whereBelongsTo($user)
             ->where('slug', self::DEFAULT_SLUG)
             ->first();
 
@@ -27,7 +29,7 @@ class ReadingPlanBootstrapper
             return null;
         }
 
-        return DB::transaction(function () use ($plan): ?ReadingPlan {
+        return DB::transaction(function () use ($plan, $user): ?ReadingPlan {
             $chapters = $this->newTestamentChapters();
 
             if ($chapters->isEmpty()) {
@@ -35,6 +37,7 @@ class ReadingPlanBootstrapper
             }
 
             $plan ??= ReadingPlan::query()->create([
+                'user_id' => $user->id,
                 'name' => 'Novo Testamento em 90 dias',
                 'slug' => self::DEFAULT_SLUG,
                 'description' => 'Leitura progressiva do Novo Testamento para criar ritmo devocional diario.',

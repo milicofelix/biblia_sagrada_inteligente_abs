@@ -7,13 +7,14 @@ use App\Http\Resources\VerseFavoriteResource;
 use App\Models\Bible\Verse;
 use App\Models\Bible\VerseFavorite;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class ToggleVerseFavoriteController extends Controller
 {
-    public function __invoke(Verse $verse): JsonResponse
+    public function __invoke(Request $request, Verse $verse): JsonResponse
     {
         $favorite = VerseFavorite::query()
-            ->whereNull('user_id')
+            ->whereBelongsTo($request->user())
             ->where('verse_id', $verse->id)
             ->first();
 
@@ -24,12 +25,13 @@ class ToggleVerseFavoriteController extends Controller
                 'favorited' => false,
                 'favorite' => null,
                 'stats' => [
-                    'favorites' => VerseFavorite::query()->count(),
+                    'favorites' => VerseFavorite::query()->whereBelongsTo($request->user())->count(),
                 ],
             ]);
         }
 
         $favorite = VerseFavorite::query()->create([
+            'user_id' => $request->user()->id,
             'verse_id' => $verse->id,
         ]);
 
@@ -37,7 +39,7 @@ class ToggleVerseFavoriteController extends Controller
             'favorited' => true,
             'favorite' => VerseFavoriteResource::make($favorite->load('verse.translation'))->resolve(),
             'stats' => [
-                'favorites' => VerseFavorite::query()->count(),
+                'favorites' => VerseFavorite::query()->whereBelongsTo($request->user())->count(),
             ],
         ], 201);
     }

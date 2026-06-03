@@ -19,6 +19,7 @@ class StoreStudyNoteController extends Controller
         ]);
 
         $note = StudyNote::query()->create([
+            'user_id' => $request->user()->id,
             'verse_id' => $verse->id,
             'title' => $validated['title'] ?? "Nota em {$verse->reference}",
             'body' => $validated['body'],
@@ -28,7 +29,7 @@ class StoreStudyNoteController extends Controller
         return response()->json([
             'note' => StudyNoteResource::make($note->load('verse.translation'))->resolve(),
             'stats' => [
-                'notes' => StudyNote::query()->count(),
+                'notes' => StudyNote::query()->whereBelongsTo($request->user())->count(),
             ],
         ], 201);
     }

@@ -1,16 +1,20 @@
 import type { FormEvent } from 'react';
 
-import { Bell, ChevronDown, Moon, Search, UserRound } from 'lucide-react';
+import { router } from '@inertiajs/react';
+import { Bell, LogOut, Moon, Search, UserRound } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+
+import type { AuthUser } from '../../types/dashboard';
 
 type TopBarProps = {
     reference: string;
+    user?: AuthUser;
     onReferenceChange: (reference: string) => void;
     onSubmit: (event: FormEvent<HTMLFormElement>) => void;
     onReadingMode?: () => void;
 };
 
-export function TopBar({ reference, onReferenceChange, onSubmit, onReadingMode }: TopBarProps) {
+export function TopBar({ reference, user, onReferenceChange, onSubmit, onReadingMode }: TopBarProps) {
     return (
         <header className="bible-topbar">
             <form onSubmit={onSubmit} className="top-search">
@@ -32,11 +36,11 @@ export function TopBar({ reference, onReferenceChange, onSubmit, onReadingMode }
                         <UserRound className="h-4 w-4" />
                     </div>
                     <div>
-                        <strong>Adriano</strong>
-                        <span>Plano Premium</span>
+                        <strong>{user?.name ?? 'Leitor'}</strong>
+                        <span>{user?.email ?? 'Conta pessoal'}</span>
                     </div>
-                    <ChevronDown className="h-4 w-4" />
                 </div>
+                <TopIconButton label="Sair" icon={LogOut} onClick={() => router.post('/logout')} />
             </div>
         </header>
     );

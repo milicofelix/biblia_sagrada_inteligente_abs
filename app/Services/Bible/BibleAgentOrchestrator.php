@@ -5,6 +5,7 @@ namespace App\Services\Bible;
 use App\Models\Bible\AiAnswer;
 use App\Models\Bible\AiQuestion;
 use App\Models\Bible\Verse;
+use App\Models\User;
 use App\Services\Bible\Agents\BibleAgent;
 use App\Services\Bible\Agents\BiblicalConnectionsAgent;
 use App\Services\Bible\Agents\ChronologyAgent;
@@ -37,17 +38,18 @@ class BibleAgentOrchestrator
         ]);
     }
 
-    public function answer(string $question): AiAnswer
+    public function answer(string $question, User $user): AiAnswer
     {
-        return $this->run($this->createPendingAnswer($question));
+        return $this->run($this->createPendingAnswer($question, $user));
     }
 
-    public function createPendingAnswer(string $question): AiAnswer
+    public function createPendingAnswer(string $question, User $user): AiAnswer
     {
         $verses = $this->findVerses($question);
         $citations = $this->citations($verses);
 
         $aiQuestion = AiQuestion::query()->create([
+            'user_id' => $user->id,
             'question' => $question,
             'verse_id' => $verses->first()?->id,
             'intent' => 'biblical_study',

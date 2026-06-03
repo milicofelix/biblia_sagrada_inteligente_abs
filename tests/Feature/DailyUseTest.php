@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Bible\ReadingPlanDay;
 use App\Models\Bible\Verse;
 use App\Models\Bible\VerseFavorite;
+use App\Models\User;
 use Database\Seeders\Bible\BibleCatalogSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -13,6 +14,16 @@ use Tests\TestCase;
 class DailyUseTest extends TestCase
 {
     use RefreshDatabase;
+
+    private User $user;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->user = User::factory()->create();
+        $this->actingAs($this->user);
+    }
 
     public function test_user_can_toggle_a_verse_as_favorite(): void
     {
@@ -26,6 +37,7 @@ class DailyUseTest extends TestCase
             ->assertJsonPath('stats.favorites', 1);
 
         $this->assertDatabaseHas('verse_favorites', [
+            'user_id' => $this->user->id,
             'verse_id' => $verse->id,
         ]);
 
@@ -45,6 +57,7 @@ class DailyUseTest extends TestCase
         $verse = $this->importSampleBible();
 
         VerseFavorite::query()->create([
+            'user_id' => $this->user->id,
             'verse_id' => $verse->id,
         ]);
 
@@ -85,6 +98,17 @@ class DailyUseTest extends TestCase
             ->assertJsonPath('plan.completedDays', 1);
 
         $this->assertNotNull($day->refresh()->completed_at);
+    }
+
+    public function test_user_cannot_complete_another_users_reading_plan_day(): void
+    {
+        $this->importSampleBible();
+        $this->get('/')->assertOk();
+
+        $day = ReadingPlanDay::query()->firstOrFail();
+        $this->actingAs(User::factory()->create());
+
+        $this->postJson("/planos-leitura/dias/{$day->id}/concluir")->assertForbidden();
     }
 
     private function importSampleBible(): Verse

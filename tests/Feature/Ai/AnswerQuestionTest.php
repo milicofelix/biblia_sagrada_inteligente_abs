@@ -7,6 +7,7 @@ use App\Models\Bible\AgentRun;
 use App\Models\Bible\AiAnswer;
 use App\Models\Bible\AiQuestion;
 use App\Models\Bible\Verse;
+use App\Models\User;
 use App\Services\Bible\BibleAgentOrchestrator;
 use Database\Seeders\Bible\BibleCatalogSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -18,6 +19,16 @@ use Tests\TestCase;
 class AnswerQuestionTest extends TestCase
 {
     use RefreshDatabase;
+
+    private User $user;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->user = User::factory()->create();
+        $this->actingAs($this->user);
+    }
 
     public function test_answer_endpoint_requires_openai_key(): void
     {
@@ -56,6 +67,7 @@ class AnswerQuestionTest extends TestCase
             ->assertJsonCount(0, 'answer.sections');
 
         $this->assertSame(1, AiQuestion::query()->count());
+        $this->assertSame($this->user->id, AiQuestion::query()->value('user_id'));
         $this->assertSame(1, AiAnswer::query()->count());
         $this->assertSame(0, AgentRun::query()->count());
         Bus::assertDispatched(RunBibleAgents::class);
@@ -72,7 +84,7 @@ class AnswerQuestionTest extends TestCase
         $this->artisan('bible:import', ['path' => 'tests/Fixtures/bible/sample-translation.json']);
 
         $answer = BibleAgentOrchestrator::default()
-            ->createPendingAnswer('Explique Joao 3:16 e conecte com perseveranca.');
+            ->createPendingAnswer('Explique Joao 3:16 e conecte com perseveranca.', $this->user);
 
         $this->assertSame('Joao 3:16', $answer->citations[0]['reference']);
         $this->assertContains('Romanos 5:3', collect($answer->citations)->pluck('reference'));
@@ -95,7 +107,7 @@ class AnswerQuestionTest extends TestCase
         $this->artisan('bible:import', ['path' => 'tests/Fixtures/bible/sample-translation.json']);
 
         $answerId = BibleAgentOrchestrator::default()
-            ->createPendingAnswer('Estou desanimado, existe algo sobre perseveranca?')
+            ->createPendingAnswer('Estou desanimado, existe algo sobre perseveranca?', $this->user)
             ->id;
 
         (new RunBibleAgents($answerId))->handle();
@@ -132,7 +144,7 @@ class AnswerQuestionTest extends TestCase
             ->push(['output_text' => 'Secao concluida.']);
 
         $answerId = BibleAgentOrchestrator::default()
-            ->createPendingAnswer('Existe algo sobre perseveranca?')
+            ->createPendingAnswer('Existe algo sobre perseveranca?', $this->user)
             ->id;
 
         (new RunBibleAgents($answerId))->handle();
@@ -144,5 +156,15 @@ class AnswerQuestionTest extends TestCase
             ->assertJsonPath('answer.agents.1.status', 'failed')
             ->assertJsonPath('answer.sections.1.title', 'Conexoes Biblicas')
             ->assertJsonCount(5, 'answer.sections');
+    }
+
+    public function test_user_cannot_view_another_users_answer(): void
+    {
+        $answer = BibleAgentOrchestrator::default()
+            ->createPendingAnswer('Como posso perseverar?', $this->user);
+
+        $this->actingAs(User::factory()->create());
+
+        $this->getJson("/ai/respostas/{$answer->id}")->assertForbidden();
     }
 }

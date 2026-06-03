@@ -3,10 +3,15 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Bible\AiQuestion;
+use App\Models\Bible\ReadingPlan;
+use App\Models\Bible\StudyNote;
+use App\Models\Bible\VerseFavorite;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -28,5 +33,25 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function aiQuestions(): HasMany
+    {
+        return $this->hasMany(AiQuestion::class);
+    }
+
+    public function readingPlans(): HasMany
+    {
+        return $this->hasMany(ReadingPlan::class);
+    }
+
+    public function studyNotes(): HasMany
+    {
+        return $this->hasMany(StudyNote::class);
+    }
+
+    public function verseFavorites(): HasMany
+    {
+        return $this->hasMany(VerseFavorite::class);
     }
 }
