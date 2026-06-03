@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Bible\AuthDailyPsalmResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,9 +14,11 @@ use Inertia\Response;
 
 class RegisteredUserController extends Controller
 {
-    public function create(): Response
+    public function create(AuthDailyPsalmResolver $dailyPsalmResolver): Response
     {
-        return Inertia::render('Auth/Register');
+        return Inertia::render('Auth/Register', [
+            'dailyPsalm' => $dailyPsalmResolver->forDate(),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse

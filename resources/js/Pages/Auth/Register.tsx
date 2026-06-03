@@ -2,8 +2,13 @@ import { Head, Link, useForm } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 
 import { AuthField, AuthShell } from '../../Components/Auth/AuthShell';
+import type { AuthDailyPsalm } from '../../Components/Auth/AuthShell';
 
-export default function Register() {
+type RegisterProps = {
+    dailyPsalm: AuthDailyPsalm;
+};
+
+export default function Register({ dailyPsalm }: RegisterProps) {
     const form = useForm({
         name: '',
         email: '',
@@ -19,7 +24,11 @@ export default function Register() {
     return (
         <>
             <Head title="Criar conta" />
-            <AuthShell title="Comece sua jornada" subtitle="Crie uma conta para guardar seus estudos de forma pessoal.">
+            <AuthShell
+                title="Comece sua jornada"
+                subtitle="Crie uma conta para guardar seus estudos de forma pessoal."
+                dailyPsalm={dailyPsalm}
+            >
                 <form onSubmit={submit} className="auth-form">
                     <AuthField
                         label="Nome"

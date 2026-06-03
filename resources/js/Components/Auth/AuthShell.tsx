@@ -5,19 +5,27 @@ import { AppLogo } from '../Dashboard/Sidebar';
 type AuthShellProps = {
     title: string;
     subtitle: string;
+    dailyPsalm: AuthDailyPsalm;
     children: ReactNode;
 };
 
-export function AuthShell({ title, subtitle, children }: AuthShellProps) {
+export type AuthDailyPsalm = {
+    reference: string;
+    text: string;
+    translation?: string | null;
+};
+
+export function AuthShell({ title, subtitle, dailyPsalm, children }: AuthShellProps) {
     return (
         <main className="auth-shell">
             <section className="auth-intro">
                 <AppLogo />
                 <div>
-                    <p className="auth-verse">
-                        "Lâmpada para os meus pés é tua palavra, e luz para o meu caminho."
-                    </p>
-                    <span>Salmos 119:105</span>
+                    <p className="auth-verse">"{dailyPsalm.text}"</p>
+                    <span>
+                        {dailyPsalm.reference}
+                        {dailyPsalm.translation ? ` · ${dailyPsalm.translation}` : ''}
+                    </span>
                 </div>
             </section>
 

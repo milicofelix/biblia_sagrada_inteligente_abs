@@ -2,8 +2,13 @@ import { Head, Link, useForm } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 
 import { AuthField, AuthShell } from '../../Components/Auth/AuthShell';
+import type { AuthDailyPsalm } from '../../Components/Auth/AuthShell';
 
-export default function Login() {
+type LoginProps = {
+    dailyPsalm: AuthDailyPsalm;
+};
+
+export default function Login({ dailyPsalm }: LoginProps) {
     const form = useForm({
         email: '',
         password: '',
@@ -18,7 +23,11 @@ export default function Login() {
     return (
         <>
             <Head title="Entrar" />
-            <AuthShell title="Bem-vindo de volta" subtitle="Entre para continuar seus estudos, notas e planos de leitura.">
+            <AuthShell
+                title="Bem-vindo de volta"
+                subtitle="Entre para continuar seus estudos, notas e planos de leitura."
+                dailyPsalm={dailyPsalm}
+            >
                 <form onSubmit={submit} className="auth-form">
                     <AuthField
                         label="E-mail"
