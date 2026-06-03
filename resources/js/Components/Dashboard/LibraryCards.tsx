@@ -1,7 +1,7 @@
 import { BookOpen, CalendarDays, Clock3, NotebookPen, Star } from 'lucide-react';
 import { useState } from 'react';
 
-import type { AiAnswer, ReadingPlan, StudyNote, VerseFavorite } from '../../types/dashboard';
+import type { AiAnswer, DailyVerse, ReadingPlan, StudyNote, VerseFavorite } from '../../types/dashboard';
 import { formatDate } from '../../utils/date';
 
 type HistoryCardProps = {
@@ -22,6 +22,11 @@ type FavoritesCardProps = {
 type ReadingPlanCardProps = {
     plan: ReadingPlan | null;
     onCompleteDay: (dayId: number) => Promise<ReadingPlan>;
+};
+
+type DailyVerseCardProps = {
+    verse: DailyVerse | null;
+    onOpenVerse: (reference: string) => void;
 };
 
 export function HistoryCard({ answers, onOpenAnswer }: HistoryCardProps) {
@@ -88,6 +93,26 @@ export function FavoritesCard({ favorites, onOpenFavorite }: FavoritesCardProps)
                 </div>
             ) : (
                 <p className="muted-card-text">Seus versiculos favoritos aparecerao aqui.</p>
+            )}
+        </div>
+    );
+}
+
+export function DailyVerseCard({ verse, onOpenVerse }: DailyVerseCardProps) {
+    return (
+        <div className="library-card verse-day-card">
+            <div className="card-title-icon">
+                <BookOpen className="h-5 w-5" />
+                <h2>Versiculo do Dia</h2>
+            </div>
+            {verse ? (
+                <button type="button" onClick={() => onOpenVerse(verse.reference)} className="w-full text-left">
+                    <p>"{verse.text}"</p>
+                    <strong>{verse.reference}</strong>
+                    {verse.translation && <small>{verse.translation}</small>}
+                </button>
+            ) : (
+                <p className="muted-card-text">Importe uma Biblia para exibir o versiculo do dia.</p>
             )}
         </div>
     );

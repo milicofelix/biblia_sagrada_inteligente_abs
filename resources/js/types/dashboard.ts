@@ -62,6 +62,13 @@ export type VerseFavorite = {
     createdAt?: string | null;
 };
 
+export type DailyVerse = {
+    id: number;
+    reference: string;
+    text: string;
+    translation?: string | null;
+};
+
 export type ReadingPlanDay = {
     id: number;
     dayNumber: number;
@@ -134,6 +141,7 @@ export type DashboardProps = {
     recentNotes?: StudyNote[];
     recentFavorites?: VerseFavorite[];
     activeReadingPlan?: ReadingPlan | null;
+    dailyVerse?: DailyVerse | null;
 };
 
 export type NavigationItem = {

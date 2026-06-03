@@ -116,4 +116,20 @@ class DashboardTest extends TestCase
                 ->where('activeReadingPlan.name', 'Novo Testamento em 90 dias')
                 ->where('activeReadingPlan.currentDay.dayNumber', 1));
     }
+
+    public function test_dashboard_includes_daily_verse_when_bible_is_imported(): void
+    {
+        $this->seed(BibleCatalogSeeder::class);
+        $this->artisan('bible:import', ['path' => 'tests/Fixtures/bible/sample-translation.json']);
+
+        $this
+            ->get('/')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard')
+                ->has('dailyVerse')
+                ->has('dailyVerse.reference')
+                ->has('dailyVerse.text')
+                ->where('dailyVerse.translation', 'TST'));
+    }
 }

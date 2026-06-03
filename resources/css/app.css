@@ -686,6 +686,16 @@
         text-align: center;
     }
 
+    .verse-day-card button {
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+    }
+
+    .verse-day-card button:hover strong {
+        color: #2f5d3a;
+    }
+
     .reading-plan-card p,
     .verse-day-card p,
     .muted-card-text {
@@ -712,6 +722,14 @@
     .reading-plan-card small {
         display: block;
         margin-bottom: 1rem;
+        color: #755f42;
+        font-family: var(--font-sans);
+        font-size: 0.75rem;
+    }
+
+    .verse-day-card small {
+        display: block;
+        margin-top: 0.35rem;
         color: #755f42;
         font-family: var(--font-sans);
         font-size: 0.75rem;

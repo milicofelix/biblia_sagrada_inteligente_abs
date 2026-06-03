@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Http\Resources\AiAnswerResource;
+use App\Http\Resources\DailyVerseResource;
 use App\Http\Resources\ReadingPlanResource;
 use App\Http\Resources\StudyNoteResource;
 use App\Http\Resources\VerseFavoriteResource;
@@ -12,6 +13,7 @@ use App\Models\Bible\Book;
 use App\Models\Bible\StudyNote;
 use App\Models\Bible\Verse;
 use App\Models\Bible\VerseFavorite;
+use App\Services\Bible\DailyVerseResolver;
 use App\Services\Bible\ReadingPlanBootstrapper;
 
 class DashboardProps
@@ -28,6 +30,9 @@ class DashboardProps
             ],
             'activeReadingPlan' => ($plan = app(ReadingPlanBootstrapper::class)->defaultNewTestamentPlan())
                 ? ReadingPlanResource::make($plan)->resolve()
+                : null,
+            'dailyVerse' => ($dailyVerse = app(DailyVerseResolver::class)->forDate())
+                ? DailyVerseResource::make($dailyVerse)->resolve()
                 : null,
             'recentFavorites' => VerseFavoriteResource::collection(
                 VerseFavorite::query()

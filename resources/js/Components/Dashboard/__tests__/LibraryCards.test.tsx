@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 
-import { FavoritesCard, HistoryCard, NotesCard, ReadingPlanCard } from '../LibraryCards';
+import { DailyVerseCard, FavoritesCard, HistoryCard, NotesCard, ReadingPlanCard } from '../LibraryCards';
 
 describe('LibraryCards', () => {
     it('lista estudos recentes e permite reabrir uma resposta dos agentes', async () => {
@@ -92,5 +92,23 @@ describe('LibraryCards', () => {
 
         expect(onCompleteDay).toHaveBeenCalledWith(10);
         expect(await screen.findByText('Leitura concluida')).toBeInTheDocument();
+    });
+
+    it('abre o versiculo do dia ao clicar no card', async () => {
+        const user = userEvent.setup();
+        const onOpenVerse = vi.fn();
+        const verse = {
+            id: 16,
+            reference: 'Joao 3:16',
+            text: 'Porque Deus amou o mundo de tal maneira...',
+            translation: 'TST',
+        };
+
+        render(<DailyVerseCard verse={verse} onOpenVerse={onOpenVerse} />);
+
+        await user.click(screen.getByRole('button', { name: /Joao 3:16/i }));
+
+        expect(screen.getByText('Versiculo do Dia')).toBeInTheDocument();
+        expect(onOpenVerse).toHaveBeenCalledWith('Joao 3:16');
     });
 });

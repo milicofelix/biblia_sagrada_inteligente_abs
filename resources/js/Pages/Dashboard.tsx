@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { FavoritesCard, HistoryCard, NotesCard, ReadingPlanCard } from '../Components/Dashboard/LibraryCards';
+import { DailyVerseCard, FavoritesCard, HistoryCard, NotesCard, ReadingPlanCard } from '../Components/Dashboard/LibraryCards';
 import { ChronologyContext } from '../Components/Dashboard/ChronologyContext';
 import { DashboardSidebar } from '../Components/Dashboard/Sidebar';
 import { StudyTools } from '../Components/Dashboard/StudyTools';
@@ -81,6 +81,7 @@ export default function Dashboard({
     recentNotes = [],
     recentFavorites = [],
     activeReadingPlan = null,
+    dailyVerse = null,
 }: DashboardProps) {
     const [reference, setReference] = useState(initialReference);
     const [activeTab, setActiveTab] = useState(tabs[0].name);
@@ -554,14 +555,7 @@ export default function Dashboard({
                         <aside className="right-library">
                             <ReadingPlanCard plan={readingPlan} onCompleteDay={completeReadingDay} />
 
-                            <div className="library-card verse-day-card">
-                                <div className="card-title-icon">
-                                    <BookOpen className="h-5 w-5" />
-                                    <h2>Versiculo do Dia</h2>
-                                </div>
-                                <p>"Entrega o teu caminho ao SENHOR; confia nele, e o mais ele fara."</p>
-                                <strong>Salmos 37:5</strong>
-                            </div>
+                            <DailyVerseCard verse={dailyVerse} onOpenVerse={openReference} />
 
                             <form onSubmit={askAgents} className="ask-card">
                                 <div className="card-title-icon">
