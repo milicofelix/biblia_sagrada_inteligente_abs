@@ -26,6 +26,6 @@ describe('DashboardSidebar', () => {
         await user.click(screen.getByRole('button', { name: /Planos de Leitura/i }));
 
         expect(onNavigate).toHaveBeenCalledWith('Planos de Leitura');
-        expect(screen.getByRole('button', { name: /Configuracoes/i })).toBeDisabled();
+        expect(screen.getByRole('button', { name: /Configuracoes/i })).toBeEnabled();
     });
 });

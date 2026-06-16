@@ -13,7 +13,7 @@ class BiblePassageLookup
     /**
      * @return Collection<int, Verse>
      */
-    public function search(string $value, int $limit = 80): Collection
+    public function search(string $value, int $limit = 80, ?int $translationId = null): Collection
     {
         $reference = $this->parser->parse($value);
 
@@ -21,15 +21,16 @@ class BiblePassageLookup
             return collect();
         }
 
-        return $this->searchReference($reference, $limit);
+        return $this->searchReference($reference, $limit, $translationId);
     }
 
     /**
      * @return Collection<int, Verse>
      */
-    public function searchReference(ParsedBibleReference $reference, int $limit = 80): Collection
+    public function searchReference(ParsedBibleReference $reference, int $limit = 80, ?int $translationId = null): Collection
     {
         return $this->queryReference($reference)
+            ->when($translationId, fn (Builder $query) => $query->where('translation_id', $translationId))
             ->orderBy('chapter_number')
             ->orderBy('verse_number')
             ->limit($limit)

@@ -8,6 +8,9 @@ use App\Http\Controllers\Bible\CompleteReadingPlanDayController;
 use App\Http\Controllers\Bible\SearchController;
 use App\Http\Controllers\Bible\StoreStudyNoteController;
 use App\Http\Controllers\Bible\ToggleVerseFavoriteController;
+use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\WorshipJournalController;
+use App\Services\UserSettingsResolver;
 use App\Support\DashboardProps;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -22,12 +25,21 @@ Route::middleware('guest')->group(function (): void {
 Route::middleware('auth')->group(function (): void {
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
-    Route::get('/', function () {
+    Route::get('/', function (UserSettingsResolver $settingsResolver) {
+        $settings = $settingsResolver->forUser(request()->user());
+
         return Inertia::render('Dashboard', [
-            'initialReference' => 'Joao 3:16',
+            'initialReference' => $settings->initial_reference,
             ...DashboardProps::make(request()->user()),
         ]);
     })->name('dashboard');
+
+    Route::get('/configuracoes', [SettingsController::class, 'edit'])->name('settings.edit');
+    Route::patch('/configuracoes', [SettingsController::class, 'update'])->name('settings.update');
+
+    Route::get('/diario-cultos', [WorshipJournalController::class, 'index'])->name('worship-journal.index');
+    Route::post('/diario-cultos', [WorshipJournalController::class, 'store'])->name('worship-journal.store');
+    Route::get('/diario-cultos/{entry}', [WorshipJournalController::class, 'show'])->name('worship-journal.show');
 
     Route::get('/buscar', [SearchController::class, '__invoke'])
         ->name('bible.search');

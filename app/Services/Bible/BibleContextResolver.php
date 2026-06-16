@@ -17,19 +17,19 @@ class BibleContextResolver
     /**
      * @return Collection<int, Verse>
      */
-    public function resolve(string $question, int $limit = 10): Collection
+    public function resolve(string $question, int $limit = 10, ?int $translationId = null): Collection
     {
         $verses = collect();
 
         foreach ($this->parser->extract($question) as $reference) {
-            $verses = $verses->merge($this->lookup->searchReference($reference, $limit));
+            $verses = $verses->merge($this->lookup->searchReference($reference, $limit, $translationId));
         }
 
         $remaining = max(0, $limit - $verses->unique('id')->count());
         $searchTerm = $this->parser->stripReferences($question) ?: $question;
 
         if ($remaining > 0) {
-            $verses = $verses->merge($this->searchTheme($searchTerm, $remaining));
+            $verses = $verses->merge($this->searchTheme($searchTerm, $remaining, $translationId));
         }
 
         $verses = $verses
@@ -41,6 +41,7 @@ class BibleContextResolver
         }
 
         return Verse::query()
+            ->when($translationId, fn ($query) => $query->where('translation_id', $translationId))
             ->with(['translation:id,abbreviation'])
             ->latest('id')
             ->limit($limit)
@@ -50,9 +51,10 @@ class BibleContextResolver
     /**
      * @return Collection<int, Verse>
      */
-    private function searchTheme(string $term, int $limit): Collection
+    private function searchTheme(string $term, int $limit, ?int $translationId = null): Collection
     {
         $results = Verse::query()
+            ->when($translationId, fn ($query) => $query->where('translation_id', $translationId))
             ->with(['translation:id,abbreviation'])
             ->search($term)
             ->limit($limit)
@@ -72,6 +74,7 @@ class BibleContextResolver
         foreach ($keywords as $keyword) {
             $results = $results->merge(
                 Verse::query()
+                    ->when($translationId, fn ($query) => $query->where('translation_id', $translationId))
                     ->with(['translation:id,abbreviation'])
                     ->search($keyword)
                     ->limit($limit - $results->unique('id')->count())

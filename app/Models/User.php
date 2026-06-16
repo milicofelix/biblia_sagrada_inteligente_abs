@@ -7,11 +7,13 @@ use App\Models\Bible\AiQuestion;
 use App\Models\Bible\ReadingPlan;
 use App\Models\Bible\StudyNote;
 use App\Models\Bible\VerseFavorite;
+use App\Models\Bible\WorshipJournalEntry;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -53,5 +55,15 @@ class User extends Authenticatable
     public function verseFavorites(): HasMany
     {
         return $this->hasMany(VerseFavorite::class);
+    }
+
+    public function worshipJournalEntries(): HasMany
+    {
+        return $this->hasMany(WorshipJournalEntry::class);
+    }
+
+    public function setting(): HasOne
+    {
+        return $this->hasOne(UserSetting::class);
     }
 }

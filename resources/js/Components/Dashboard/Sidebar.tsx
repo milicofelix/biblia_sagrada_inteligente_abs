@@ -1,4 +1,4 @@
-import { BookOpen, CalendarDays, Clock3, Home, Library, PenLine, Settings, Star } from 'lucide-react';
+import { BookOpen, CalendarDays, Church, Clock3, Home, Library, PenLine, Settings, Star } from 'lucide-react';
 
 import type { DashboardStats, NavigationItem } from '../../types/dashboard';
 
@@ -7,10 +7,11 @@ const navigationItems: NavigationItem[] = [
     { label: 'Biblia', icon: BookOpen },
     { label: 'Estudos', icon: Library },
     { label: 'Planos de Leitura', icon: CalendarDays },
+    { label: 'Diario de Cultos', icon: Church },
     { label: 'Favoritos', icon: Star },
     { label: 'Anotacoes', icon: PenLine },
     { label: 'Historico', icon: Clock3 },
-    { label: 'Configuracoes', icon: Settings, disabled: true },
+    { label: 'Configuracoes', icon: Settings },
 ];
 
 type DashboardSidebarProps = {

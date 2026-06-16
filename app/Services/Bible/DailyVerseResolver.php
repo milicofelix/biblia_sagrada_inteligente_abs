@@ -7,11 +7,14 @@ use Illuminate\Support\Carbon;
 
 class DailyVerseResolver
 {
-    public function forDate(?Carbon $date = null): ?Verse
+    public function forDate(?Carbon $date = null, ?int $translationId = null): ?Verse
     {
         $date ??= now();
 
-        $count = Verse::query()->count();
+        $query = Verse::query()
+            ->when($translationId, fn ($query) => $query->where('translation_id', $translationId));
+
+        $count = $query->count();
 
         if ($count === 0) {
             return null;
@@ -19,7 +22,7 @@ class DailyVerseResolver
 
         $offset = ((int) $date->format('z')) % $count;
 
-        return Verse::query()
+        return $query
             ->with(['translation:id,abbreviation'])
             ->orderBy('id')
             ->skip($offset)

@@ -12,6 +12,7 @@ use App\Services\Bible\Agents\ChronologyAgent;
 use App\Services\Bible\Agents\PracticalApplicationAgent;
 use App\Services\Bible\Agents\StudyAgent;
 use App\Services\Bible\Agents\TheologianAgent;
+use App\Services\UserSettingsResolver;
 use Illuminate\Support\Collection;
 use Throwable;
 
@@ -45,7 +46,9 @@ class BibleAgentOrchestrator
 
     public function createPendingAnswer(string $question, User $user): AiAnswer
     {
-        $verses = $this->findVerses($question);
+        $settings = app(UserSettingsResolver::class)->forUser($user);
+        $translationId = app(UserSettingsResolver::class)->preferredTranslationId($settings);
+        $verses = $this->findVerses($question, $translationId);
         $citations = $this->citations($verses);
 
         $aiQuestion = AiQuestion::query()->create([
@@ -138,9 +141,9 @@ class BibleAgentOrchestrator
     /**
      * @return Collection<int, Verse>
      */
-    private function findVerses(string $question): Collection
+    private function findVerses(string $question, ?int $translationId = null): Collection
     {
-        return $this->contextResolver->resolve($question, 10);
+        return $this->contextResolver->resolve($question, 10, $translationId);
     }
 
     /**

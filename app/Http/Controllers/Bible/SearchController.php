@@ -8,6 +8,7 @@ use App\Models\Bible\StudyNote;
 use App\Models\Bible\Verse;
 use App\Services\Bible\BiblicalTimelineResolver;
 use App\Services\Bible\References\BiblePassageLookup;
+use App\Services\UserSettingsResolver;
 use App\Support\DashboardProps;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -15,16 +16,19 @@ use Inertia\Response;
 
 class SearchController extends Controller
 {
-    public function __invoke(Request $request, BiblePassageLookup $passageLookup): Response
+    public function __invoke(Request $request, BiblePassageLookup $passageLookup, UserSettingsResolver $settingsResolver): Response
     {
         $term = trim((string) $request->query('q', ''));
         $results = [];
+        $settings = $settingsResolver->forUser($request->user());
+        $translationId = $settingsResolver->preferredTranslationId($settings);
 
         if ($term !== '') {
-            $verses = $passageLookup->search($term, 80);
+            $verses = $passageLookup->search($term, 80, $translationId);
 
             if ($verses->isEmpty()) {
                 $verses = Verse::query()
+                    ->when($translationId, fn ($query) => $query->where('translation_id', $translationId))
                     ->with(['translation:id,abbreviation', 'book:id,name,testament,position'])
                     ->search($term)
                     ->limit(8)

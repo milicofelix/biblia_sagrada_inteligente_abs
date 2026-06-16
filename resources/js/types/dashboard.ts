@@ -6,6 +6,7 @@ export type DashboardStats = {
     notes?: number;
     favorites?: number;
     agentRuns?: number;
+    worshipJournalEntries?: number;
 };
 
 export type VerseResultData = {
@@ -142,9 +143,15 @@ export type DashboardProps = {
     recentFavorites?: VerseFavorite[];
     activeReadingPlan?: ReadingPlan | null;
     dailyVerse?: DailyVerse | null;
+    settings?: DashboardSettings;
     auth?: {
         user: AuthUser;
     };
+};
+
+export type DashboardSettings = {
+    theme?: 'light' | 'night' | string;
+    notificationsEnabled?: boolean;
 };
 
 export type AuthUser = {

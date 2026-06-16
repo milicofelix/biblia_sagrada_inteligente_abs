@@ -175,6 +175,396 @@
         font-weight: 700;
     }
 
+    .settings-shell {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: 230px minmax(0, 1fr);
+        background: #f4ecdd;
+        color: #2b1f15;
+        font-family: var(--font-sans);
+    }
+
+    .settings-main {
+        min-width: 0;
+        padding: 2rem;
+    }
+
+    .settings-header,
+    .settings-form {
+        width: min(100%, 900px);
+        margin-inline: auto;
+    }
+
+    .settings-header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .settings-header span {
+        color: #8a6117;
+        font-size: 0.74rem;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+
+    .settings-header h1 {
+        margin: 0.25rem 0 0.35rem;
+        color: #302116;
+        font-family: Georgia, Cambria, 'Times New Roman', serif;
+        font-size: 2.25rem;
+    }
+
+    .settings-header p,
+    .settings-section-heading p {
+        margin: 0;
+        color: #80664a;
+        font-size: 0.86rem;
+        line-height: 1.5;
+    }
+
+    .settings-back,
+    .settings-footer button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        min-height: 2.55rem;
+        border-radius: 0.45rem;
+        padding: 0 1rem;
+        font-size: 0.82rem;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .settings-back {
+        border: 1px solid rgba(129, 91, 44, 0.22);
+        background: rgba(255, 251, 244, 0.72);
+        color: #6b4a20;
+    }
+
+    .settings-form {
+        overflow: hidden;
+        border: 1px solid rgba(129, 91, 44, 0.2);
+        border-radius: 0.55rem;
+        background: rgba(255, 251, 244, 0.78);
+        box-shadow: 0 20px 45px rgba(81, 53, 21, 0.09);
+    }
+
+    .settings-section {
+        display: grid;
+        grid-template-columns: minmax(14rem, 0.8fr) minmax(18rem, 1.2fr);
+        gap: 2rem;
+        padding: 1.6rem;
+        border-bottom: 1px solid rgba(129, 91, 44, 0.14);
+    }
+
+    .settings-section-heading {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.7rem;
+        color: #8a6117;
+    }
+
+    .settings-section-heading h2 {
+        margin: 0 0 0.3rem;
+        color: #3c2b1d;
+        font-family: Georgia, Cambria, 'Times New Roman', serif;
+        font-size: 1.15rem;
+    }
+
+    .settings-field {
+        display: grid;
+        align-content: start;
+        gap: 0.5rem;
+        color: #59452e;
+        font-size: 0.82rem;
+        font-weight: 700;
+    }
+
+    .settings-controls {
+        min-width: 0;
+    }
+
+    .settings-field + .settings-field {
+        margin-top: 1rem;
+    }
+
+    .settings-field input,
+    .settings-field select,
+    .settings-field textarea {
+        min-height: 2.75rem;
+        width: 100%;
+        border: 1px solid rgba(157, 116, 59, 0.34);
+        border-radius: 0.45rem;
+        outline: 0;
+        padding: 0 0.8rem;
+        background: rgba(255, 255, 255, 0.75);
+        color: #332316;
+    }
+
+    .settings-field textarea {
+        min-height: 8rem;
+        padding-block: 0.75rem;
+        resize: vertical;
+        line-height: 1.55;
+    }
+
+    .settings-field small {
+        color: #a33b2b;
+        font-weight: 500;
+    }
+
+    .theme-segmented {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: min(100%, 22rem);
+        padding: 0.25rem;
+        border: 1px solid rgba(157, 116, 59, 0.25);
+        border-radius: 0.5rem;
+        background: rgba(129, 91, 44, 0.07);
+    }
+
+    .theme-segmented button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        min-height: 2.35rem;
+        border: 0;
+        border-radius: 0.35rem;
+        background: transparent;
+        color: #80664a;
+        font-size: 0.82rem;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .theme-segmented button.selected {
+        background: #fffaf0;
+        color: #6b4a20;
+        box-shadow: 0 2px 8px rgba(81, 53, 21, 0.1);
+    }
+
+    .settings-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        color: #49341f;
+    }
+
+    .settings-toggle strong,
+    .settings-toggle span {
+        display: block;
+    }
+
+    .settings-toggle strong {
+        font-size: 0.86rem;
+    }
+
+    .settings-toggle span {
+        margin-top: 0.25rem;
+        color: #80664a;
+        font-size: 0.78rem;
+    }
+
+    .settings-toggle input {
+        width: 2.8rem;
+        height: 1.5rem;
+        accent-color: #8a6117;
+        cursor: pointer;
+    }
+
+    .settings-footer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 1rem;
+        padding: 1rem 1.6rem;
+    }
+
+    .settings-footer p {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin: 0 auto 0 0;
+        color: #35633c;
+        font-size: 0.8rem;
+        font-weight: 700;
+    }
+
+    .settings-footer button {
+        border: 0;
+        background: linear-gradient(180deg, #a87927, #87580e);
+        color: #fff8e8;
+    }
+
+    .worship-form,
+    .worship-entry-card,
+    .worship-empty {
+        width: min(100%, 900px);
+        margin-inline: auto;
+        border: 1px solid rgba(129, 91, 44, 0.2);
+        border-radius: 0.55rem;
+        background: rgba(255, 251, 244, 0.78);
+        box-shadow: 0 20px 45px rgba(81, 53, 21, 0.09);
+    }
+
+    .worship-form {
+        padding: 1.35rem 1.6rem 0;
+    }
+
+    .worship-form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .worship-list {
+        display: grid;
+        gap: 1rem;
+        width: min(100%, 900px);
+        margin: 1.25rem auto 0;
+    }
+
+    .worship-entry-card {
+        padding: 1.35rem 1.5rem;
+    }
+
+    .worship-entry-card header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .worship-entry-card header span,
+    .worship-entry-meta span,
+    .worship-loading {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .worship-entry-card header span {
+        color: #8a6117;
+        font-size: 0.78rem;
+        font-weight: 800;
+    }
+
+    .worship-entry-card h2 {
+        margin: 0.45rem 0 0.25rem;
+        color: #302116;
+        font-family: Georgia, Cambria, 'Times New Roman', serif;
+        font-size: 1.35rem;
+    }
+
+    .worship-entry-card header p,
+    .worship-entry-meta,
+    .worship-loading {
+        color: #80664a;
+        font-size: 0.84rem;
+    }
+
+    .worship-status {
+        min-width: max-content;
+        border-radius: 999px;
+        padding: 0.32rem 0.7rem;
+        background: rgba(129, 91, 44, 0.1);
+        color: #6b4a20;
+        font-size: 0.74rem;
+        font-weight: 800;
+    }
+
+    .worship-status.completed {
+        background: rgba(53, 99, 60, 0.13);
+        color: #35633c;
+    }
+
+    .worship-status.failed {
+        background: rgba(163, 59, 43, 0.12);
+        color: #a33b2b;
+    }
+
+    .worship-status.running,
+    .worship-status.queued {
+        background: rgba(168, 121, 39, 0.14);
+        color: #8a6117;
+    }
+
+    .worship-entry-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.8rem;
+        margin-top: 0.85rem;
+    }
+
+    .worship-entry-card blockquote {
+        margin: 1rem 0 0;
+        border-left: 3px solid #a87927;
+        padding: 0.2rem 0 0.2rem 0.8rem;
+        color: #59452e;
+        font-style: italic;
+        line-height: 1.6;
+    }
+
+    .worship-passage,
+    .worship-study {
+        margin-top: 1rem;
+        border-radius: 0.5rem;
+        background: rgba(255, 255, 255, 0.45);
+        padding: 1rem;
+    }
+
+    .worship-passage p,
+    .worship-study p {
+        margin: 0;
+        color: #49341f;
+        line-height: 1.65;
+    }
+
+    .worship-passage p + p,
+    .worship-study p + p {
+        margin-top: 0.75rem;
+    }
+
+    .worship-loading,
+    .worship-error {
+        margin-top: 1rem;
+        border-radius: 0.45rem;
+        padding: 0.85rem 1rem;
+    }
+
+    .worship-loading {
+        background: rgba(168, 121, 39, 0.1);
+        color: #7d541a;
+        font-weight: 700;
+    }
+
+    .worship-error {
+        background: rgba(163, 59, 43, 0.1);
+        color: #a33b2b;
+        font-weight: 700;
+    }
+
+    .worship-empty {
+        display: grid;
+        place-items: center;
+        padding: 2.5rem 1.5rem;
+        text-align: center;
+        color: #80664a;
+    }
+
+    .worship-empty h2 {
+        margin: 0.8rem 0 0.25rem;
+        color: #302116;
+        font-family: Georgia, Cambria, 'Times New Roman', serif;
+    }
+
     .bible-shell {
         min-height: 100vh;
         display: grid;
@@ -199,6 +589,147 @@
             linear-gradient(90deg, rgba(120, 82, 39, 0.035) 1px, transparent 1px);
         background-size: 34px 34px, 41px 41px;
         mix-blend-mode: multiply;
+    }
+
+    .bible-shell.theme-night,
+    .settings-shell.theme-night {
+        background: #171c1a;
+        color: #e9e1d1;
+    }
+
+    .bible-shell.theme-night .bible-sidebar,
+    .settings-shell.theme-night .bible-sidebar {
+        border-color: rgba(221, 192, 139, 0.16);
+        background: rgba(22, 29, 26, 0.92);
+    }
+
+    .bible-shell.theme-night .bible-nav button,
+    .settings-shell.theme-night .bible-nav button {
+        color: #d7c8ad;
+    }
+
+    .bible-shell.theme-night .bible-nav button:hover,
+    .bible-shell.theme-night .bible-nav button.active,
+    .settings-shell.theme-night .bible-nav button:hover,
+    .settings-shell.theme-night .bible-nav button.active {
+        background: rgba(197, 151, 74, 0.16);
+        color: #f3d99c;
+    }
+
+    .bible-shell.theme-night .sidebar-note,
+    .settings-shell.theme-night .sidebar-note,
+    .bible-shell.theme-night .top-search,
+    .bible-shell.theme-night .top-icon-button,
+    .bible-shell.theme-night .profile-chip {
+        border-color: rgba(221, 192, 139, 0.16);
+        background: rgba(29, 37, 33, 0.88);
+        color: #ead8b6;
+    }
+
+    .bible-shell.theme-night .sidebar-note p,
+    .bible-shell.theme-night .top-search input {
+        color: #f2e8d5;
+    }
+
+    .bible-shell.theme-night .sidebar-note span,
+    .bible-shell.theme-night .profile-chip span {
+        color: #b8aa91;
+    }
+
+    .settings-shell.theme-night .settings-header h1,
+    .settings-shell.theme-night .settings-section-heading h2,
+    .settings-shell.theme-night .settings-toggle {
+        color: #f2e8d5;
+    }
+
+    .settings-shell.theme-night .settings-header p,
+    .settings-shell.theme-night .settings-section-heading p,
+    .settings-shell.theme-night .settings-toggle span {
+        color: #b8aa91;
+    }
+
+    .settings-shell.theme-night .settings-form,
+    .settings-shell.theme-night .settings-back {
+        border-color: rgba(221, 192, 139, 0.16);
+        background: rgba(29, 37, 33, 0.9);
+        color: #ead8b6;
+    }
+
+    .settings-shell.theme-night .settings-section {
+        border-color: rgba(221, 192, 139, 0.12);
+    }
+
+    .settings-shell.theme-night .settings-field {
+        color: #d7c8ad;
+    }
+
+    .settings-shell.theme-night .settings-field input,
+    .settings-shell.theme-night .settings-field select,
+    .settings-shell.theme-night .settings-field textarea {
+        border-color: rgba(221, 192, 139, 0.2);
+        background: #222b27;
+        color: #f2e8d5;
+    }
+
+    .settings-shell.theme-night .theme-segmented {
+        border-color: rgba(221, 192, 139, 0.16);
+        background: #202824;
+    }
+
+    .settings-shell.theme-night .theme-segmented button.selected {
+        background: #354238;
+        color: #f3d99c;
+    }
+
+    .settings-shell.theme-night .worship-form,
+    .settings-shell.theme-night .worship-entry-card,
+    .settings-shell.theme-night .worship-empty,
+    .settings-shell.theme-night .worship-passage,
+    .settings-shell.theme-night .worship-study {
+        border-color: rgba(221, 192, 139, 0.16);
+        background: rgba(29, 37, 33, 0.9);
+        color: #ead8b6;
+    }
+
+    .settings-shell.theme-night .worship-entry-card h2,
+    .settings-shell.theme-night .worship-empty h2,
+    .settings-shell.theme-night .worship-passage p,
+    .settings-shell.theme-night .worship-study p {
+        color: #f2e8d5;
+    }
+
+    .settings-shell.theme-night .worship-entry-card header p,
+    .settings-shell.theme-night .worship-entry-meta,
+    .settings-shell.theme-night .worship-entry-card blockquote {
+        color: #b8aa91;
+    }
+
+    .bible-shell.theme-night .open-book,
+    .bible-shell.theme-night .book-page,
+    .bible-shell.theme-night .ai-card,
+    .bible-shell.theme-night .library-card,
+    .bible-shell.theme-night .ask-card {
+        border-color: rgba(221, 192, 139, 0.14);
+        background: #202824;
+        color: #eadfca;
+        box-shadow: 0 16px 36px rgba(0, 0, 0, 0.22);
+    }
+
+    .bible-shell.theme-night .book-page::after {
+        opacity: 0.08;
+    }
+
+    .bible-shell.theme-night .verse-copy,
+    .bible-shell.theme-night .verse-heading h1,
+    .bible-shell.theme-night .library-card h2,
+    .bible-shell.theme-night .ask-card h2 {
+        color: #f2e8d5;
+    }
+
+    .bible-shell.theme-night .translation-line,
+    .bible-shell.theme-night .breadcrumb-line,
+    .bible-shell.theme-night .library-card p {
+        color: #b8aa91;
     }
 
     .bible-sidebar {
@@ -1014,6 +1545,23 @@
     }
 
     @media (max-width: 860px) {
+        .settings-shell {
+            display: block;
+        }
+
+        .settings-main {
+            padding: 1rem;
+        }
+
+        .settings-section {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .worship-form-grid {
+            grid-template-columns: 1fr;
+        }
+
         .bible-shell {
             display: block;
             overflow-x: clip;
@@ -1142,6 +1690,28 @@
 
         .auth-panel-inner {
             padding: 1.25rem;
+        }
+
+        .settings-header {
+            display: grid;
+            align-items: start;
+        }
+
+        .settings-back {
+            width: 100%;
+        }
+
+        .settings-section,
+        .settings-footer {
+            padding: 1rem;
+        }
+
+        .settings-footer {
+            display: grid;
+        }
+
+        .settings-footer button {
+            width: 100%;
         }
 
         .bible-sidebar {

@@ -13,15 +13,24 @@ use App\Models\Bible\Book;
 use App\Models\Bible\StudyNote;
 use App\Models\Bible\Verse;
 use App\Models\Bible\VerseFavorite;
+use App\Models\Bible\WorshipJournalEntry;
 use App\Models\User;
 use App\Services\Bible\DailyVerseResolver;
 use App\Services\Bible\ReadingPlanBootstrapper;
+use App\Services\UserSettingsResolver;
 
 class DashboardProps
 {
     public static function make(User $user): array
     {
+        $settings = app(UserSettingsResolver::class)->forUser($user);
+        $translationId = app(UserSettingsResolver::class)->preferredTranslationId($settings);
+
         return [
+            'settings' => [
+                'theme' => $settings->theme,
+                'notificationsEnabled' => $settings->notifications_enabled,
+            ],
             'stats' => [
                 'books' => Book::query()->count(),
                 'verses' => Verse::query()->count(),
@@ -30,11 +39,12 @@ class DashboardProps
                 'agentRuns' => AgentRun::query()
                     ->whereHas('answer.question', fn ($query) => $query->whereBelongsTo($user))
                     ->count(),
+                'worshipJournalEntries' => WorshipJournalEntry::query()->whereBelongsTo($user)->count(),
             ],
             'activeReadingPlan' => ($plan = app(ReadingPlanBootstrapper::class)->defaultNewTestamentPlan($user))
                 ? ReadingPlanResource::make($plan)->resolve()
                 : null,
-            'dailyVerse' => ($dailyVerse = app(DailyVerseResolver::class)->forDate())
+            'dailyVerse' => ($dailyVerse = app(DailyVerseResolver::class)->forDate(translationId: $translationId))
                 ? DailyVerseResource::make($dailyVerse)->resolve()
                 : null,
             'recentFavorites' => VerseFavoriteResource::collection(

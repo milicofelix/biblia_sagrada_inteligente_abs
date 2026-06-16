@@ -82,6 +82,7 @@ export default function Dashboard({
     recentFavorites = [],
     activeReadingPlan = null,
     dailyVerse = null,
+    settings = {},
     auth,
 }: DashboardProps) {
     const [reference, setReference] = useState(initialReference);
@@ -302,9 +303,11 @@ export default function Dashboard({
                 scrollToPanel('ai-study-card');
             },
             'Planos de Leitura': () => scrollToPanel('reading-plan-card'),
+            'Diario de Cultos': () => window.location.assign('/diario-cultos'),
             Favoritos: () => scrollToPanel('favorites-card'),
             Anotacoes: () => scrollToPanel('notes-card'),
             Historico: () => scrollToPanel('history-card'),
+            Configuracoes: () => window.location.assign('/configuracoes'),
         };
 
         actions[label]?.();
@@ -411,7 +414,7 @@ export default function Dashboard({
         <>
             <Head title="Dashboard" />
 
-            <main className="bible-shell">
+            <main className={`bible-shell ${settings.theme === 'night' ? 'theme-night' : ''}`}>
                 <DashboardSidebar stats={statsState} activeLabel={activeNav} onNavigate={handleSidebarNavigate} />
 
                 <section className="bible-main">
