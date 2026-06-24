@@ -1,5 +1,5 @@
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import { BookOpen, CalendarDays, Check, Church, Loader2, Save, Sparkles, UserRound } from 'lucide-react';
+import { BookOpen, CalendarDays, Check, Church, Loader2, Pencil, Save, Sparkles, Trash2, UserRound, X } from 'lucide-react';
 import type { FormEvent } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -54,9 +54,19 @@ const WORSHIP_PRELOAD_STEPS = [
     { until: 100, message: 'Estudo pronto', detail: 'Resumo recebido e Diario de Cultos atualizado.' },
 ];
 
+const emptyForm = () => ({
+    worship_date: new Date().toISOString().slice(0, 10),
+    passage_reference: '',
+    title: '',
+    church_name: '',
+    preacher_name: '',
+    personal_notes: '',
+});
+
 export default function WorshipJournal({ stats, settings = {}, entries }: WorshipJournalProps) {
     const shared = usePage<SharedProps>().props;
     const [journalEntries, setJournalEntries] = useState(entries);
+    const [editingEntryId, setEditingEntryId] = useState<number | null>(null);
     const [trackedEntryId, setTrackedEntryId] = useState<number | null>(null);
     const [preload, setPreload] = useState<WorshipPreloadState>({
         isOpen: false,
@@ -64,14 +74,17 @@ export default function WorshipJournal({ stats, settings = {}, entries }: Worshi
         message: 'Preparando registro',
         detail: 'Aguarde enquanto organizamos o Diario de Cultos.',
     });
-    const form = useForm({
-        worship_date: new Date().toISOString().slice(0, 10),
-        passage_reference: '',
-        title: '',
-        church_name: '',
-        preacher_name: '',
-        personal_notes: '',
-    });
+    const form = useForm(emptyForm());
+
+    const editingEntry = useMemo(
+        () => journalEntries.find((entry) => entry.id === editingEntryId) ?? null,
+        [editingEntryId, journalEntries],
+    );
+
+    const trackedEntry = useMemo(
+        () => journalEntries.find((entry) => entry.id === trackedEntryId) ?? null,
+        [journalEntries, trackedEntryId],
+    );
 
     useEffect(() => {
         setJournalEntries(entries);
@@ -82,11 +95,6 @@ export default function WorshipJournal({ stats, settings = {}, entries }: Worshi
             setPreloadProgress(62, 'Culto registrado', 'O card foi criado. Agora estamos acompanhando a geracao do estudo.');
         }
     }, [entries]);
-
-    const trackedEntry = useMemo(
-        () => journalEntries.find((entry) => entry.id === trackedEntryId) ?? null,
-        [journalEntries, trackedEntryId],
-    );
 
     useEffect(() => {
         if (!preload.isOpen || !trackedEntry) {
@@ -196,6 +204,16 @@ export default function WorshipJournal({ stats, settings = {}, entries }: Worshi
 
     function submit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
+
+        if (editingEntryId) {
+            form.patch(`/diario-cultos/${editingEntryId}`, {
+                preserveScroll: true,
+                onSuccess: () => cancelEdit(),
+            });
+
+            return;
+        }
+
         setTrackedEntryId(null);
         setPreload({
             isOpen: true,
@@ -222,6 +240,44 @@ export default function WorshipJournal({ stats, settings = {}, entries }: Worshi
                 window.setTimeout(() => setPreload((current) => ({ ...current, isOpen: false })), 1400);
             },
             onFinish: () => setPreloadProgress(50, 'Processando retorno', 'Atualizando o Diario de Cultos sem exigir refresh manual.'),
+        });
+    }
+
+    function startEdit(entry: WorshipJournalEntry) {
+        setEditingEntryId(entry.id);
+        form.clearErrors();
+        form.setData('worship_date', entry.worshipDate);
+        form.setData('passage_reference', entry.passageReference);
+        form.setData('title', entry.title ?? '');
+        form.setData('church_name', entry.churchName ?? '');
+        form.setData('preacher_name', entry.preacherName ?? '');
+        form.setData('personal_notes', entry.personalNotes ?? '');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function cancelEdit() {
+        setEditingEntryId(null);
+        form.clearErrors();
+        form.setData('worship_date', new Date().toISOString().slice(0, 10));
+        form.reset('passage_reference', 'title', 'church_name', 'preacher_name', 'personal_notes');
+    }
+
+    function deleteEntry(entry: WorshipJournalEntry) {
+        const title = entry.title || entry.passageReference;
+
+        if (!window.confirm(`Excluir o registro "${title}" do Diario de Cultos?`)) {
+            return;
+        }
+
+        router.delete(`/diario-cultos/${entry.id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setJournalEntries((current) => current.filter((item) => item.id !== entry.id));
+
+                if (editingEntryId === entry.id) {
+                    cancelEdit();
+                }
+            },
         });
     }
 
@@ -258,7 +314,18 @@ export default function WorshipJournal({ stats, settings = {}, entries }: Worshi
                         </button>
                     </header>
 
-                    <form onSubmit={submit} className="worship-form" aria-busy={preload.isOpen || form.processing}>
+                    <form onSubmit={submit} className={`worship-form ${editingEntry ? 'is-editing' : ''}`} aria-busy={preload.isOpen || form.processing}>
+                        {editingEntry && (
+                            <div className="worship-edit-banner">
+                                <Pencil className="h-4 w-4" />
+                                <span>Editando: {editingEntry.title || editingEntry.passageReference}</span>
+                                <button type="button" onClick={cancelEdit}>
+                                    <X className="h-4 w-4" />
+                                    Cancelar edicao
+                                </button>
+                            </div>
+                        )}
+
                         <div className="worship-form-grid">
                             <label className="settings-field">
                                 <span>Data do culto</span>
@@ -329,10 +396,30 @@ export default function WorshipJournal({ stats, settings = {}, entries }: Worshi
                                     Culto registrado. O agente esta preparando o estudo.
                                 </p>
                             )}
-                            <button type="submit" disabled={preload.isOpen || form.processing}>
-                                <Save className="h-4 w-4" />
-                                {form.processing ? 'Salvando...' : 'Registrar culto'}
-                            </button>
+                            {shared.flash?.status === 'worship-journal-updated' && (
+                                <p>
+                                    <Check className="h-4 w-4" />
+                                    Registro atualizado com sucesso.
+                                </p>
+                            )}
+                            {shared.flash?.status === 'worship-journal-deleted' && (
+                                <p>
+                                    <Check className="h-4 w-4" />
+                                    Registro excluido com sucesso.
+                                </p>
+                            )}
+                            <div className="worship-form-actions">
+                                {editingEntry && (
+                                    <button type="button" className="worship-secondary-action" onClick={cancelEdit}>
+                                        <X className="h-4 w-4" />
+                                        Cancelar
+                                    </button>
+                                )}
+                                <button type="submit" disabled={preload.isOpen || form.processing}>
+                                    <Save className="h-4 w-4" />
+                                    {form.processing ? 'Salvando...' : editingEntry ? 'Salvar alteracoes' : 'Registrar culto'}
+                                </button>
+                            </div>
                         </footer>
                     </form>
 
@@ -340,7 +427,15 @@ export default function WorshipJournal({ stats, settings = {}, entries }: Worshi
 
                     <section className="worship-list">
                         {journalEntries.length > 0 ? (
-                            journalEntries.map((entry) => <WorshipEntryCard key={entry.id} entry={entry} />)
+                            journalEntries.map((entry) => (
+                                <WorshipEntryCard
+                                    key={entry.id}
+                                    entry={entry}
+                                    isEditing={editingEntryId === entry.id}
+                                    onEdit={startEdit}
+                                    onDelete={deleteEntry}
+                                />
+                            ))
                         ) : (
                             <div className="worship-empty">
                                 <Church className="h-8 w-8" />
@@ -354,6 +449,7 @@ export default function WorshipJournal({ stats, settings = {}, entries }: Worshi
         </>
     );
 }
+
 
 function WorshipRegisterPreload({ progress }: { progress: WorshipPreloadState }) {
     const safePercent = Math.min(Math.max(progress.percent, 0), 100);
@@ -385,9 +481,19 @@ function WorshipRegisterPreload({ progress }: { progress: WorshipPreloadState })
     );
 }
 
-function WorshipEntryCard({ entry }: { entry: WorshipJournalEntry }) {
+function WorshipEntryCard({
+    entry,
+    isEditing,
+    onEdit,
+    onDelete,
+}: {
+    entry: WorshipJournalEntry;
+    isEditing: boolean;
+    onEdit: (entry: WorshipJournalEntry) => void;
+    onDelete: (entry: WorshipJournalEntry) => void;
+}) {
     return (
-        <article className="worship-entry-card">
+        <article className={`worship-entry-card ${isEditing ? 'is-editing' : ''}`}>
             <header>
                 <div>
                     <span>
@@ -397,7 +503,19 @@ function WorshipEntryCard({ entry }: { entry: WorshipJournalEntry }) {
                     <h2>{entry.title || entry.passageReference}</h2>
                     <p>{entry.passageReference}</p>
                 </div>
-                <StatusBadge status={entry.status} />
+                <div className="worship-card-side">
+                    <StatusBadge status={entry.status} />
+                    <div className="worship-card-actions" aria-label={`Acoes do registro ${entry.title || entry.passageReference}`}>
+                        <button type="button" onClick={() => onEdit(entry)} disabled={isEditing}>
+                            <Pencil className="h-4 w-4" />
+                            Editar
+                        </button>
+                        <button type="button" className="danger" onClick={() => onDelete(entry)}>
+                            <Trash2 className="h-4 w-4" />
+                            Excluir
+                        </button>
+                    </div>
+                </div>
             </header>
 
             <div className="worship-entry-meta">

@@ -40,6 +40,8 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/diario-cultos', [WorshipJournalController::class, 'index'])->name('worship-journal.index');
     Route::post('/diario-cultos', [WorshipJournalController::class, 'store'])->name('worship-journal.store');
     Route::get('/diario-cultos/{entry}', [WorshipJournalController::class, 'show'])->name('worship-journal.show');
+    Route::patch('/diario-cultos/{entry}', [WorshipJournalController::class, 'update'])->name('worship-journal.update');
+    Route::delete('/diario-cultos/{entry}', [WorshipJournalController::class, 'destroy'])->name('worship-journal.destroy');
 
     Route::get('/buscar', [SearchController::class, '__invoke'])
         ->name('bible.search');

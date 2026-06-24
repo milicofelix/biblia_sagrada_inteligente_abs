@@ -4,16 +4,20 @@ import react from '@vitejs/plugin-react';
 import { bunny } from 'laravel-vite-plugin/fonts';
 import tailwindcss from '@tailwindcss/vite';
 
+const useRemoteFonts = process.env.VITE_USE_REMOTE_FONTS === 'true';
+
 export default defineConfig({
     plugins: [
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.tsx'],
             refresh: true,
-            fonts: [
-                bunny('Instrument Sans', {
-                    weights: [400, 500, 600],
-                }),
-            ],
+            fonts: useRemoteFonts
+                ? [
+                      bunny('Instrument Sans', {
+                          weights: [400, 500, 600],
+                      }),
+                  ]
+                : [],
         }),
         react(),
         tailwindcss(),
