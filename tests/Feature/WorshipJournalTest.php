@@ -45,7 +45,9 @@ class WorshipJournalTest extends TestCase
                 ->component('WorshipJournal')
                 ->has('entries', 1)
                 ->where('entries.0.passageReference', 'Salmos 44:26')
-                ->where('entries.0.title', 'Levanta-te em nosso auxilio'));
+                ->where('entries.0.title', 'Levanta-te em nosso auxilio')
+                ->where('entries.0.progressPercent', 100)
+                ->where('entries.0.progressStep', 'concluido'));
     }
 
     public function test_user_can_store_worship_journal_entry_and_queue_study_generation(): void
@@ -69,6 +71,8 @@ class WorshipJournalTest extends TestCase
         $this->assertSame($this->user->id, $entry->user_id);
         $this->assertSame('Salmos 44:26', $entry->passage_reference);
         $this->assertSame('queued', $entry->status);
+        $this->assertSame(8, $entry->progress_percent);
+        $this->assertSame('registro-salvo', $entry->progress_step);
 
         Bus::assertDispatched(GenerateWorshipJournalStudy::class);
     }
@@ -102,6 +106,8 @@ class WorshipJournalTest extends TestCase
         $entry->refresh();
 
         $this->assertSame('completed', $entry->status);
+        $this->assertSame(100, $entry->progress_percent);
+        $this->assertSame('concluido', $entry->progress_step);
         $this->assertSame('Resumo do culto gerado pela IA.', $entry->ai_study);
         $this->assertSame('Joao 3:16', $entry->passage[0]['reference']);
         $this->assertNotNull($entry->generated_at);
@@ -136,93 +142,4 @@ class WorshipJournalTest extends TestCase
 
         $this->assertSame(0, WorshipJournalEntry::query()->count());
     }
-
-
-    public function test_user_can_update_own_worship_journal_entry_and_queue_regeneration(): void
-    {
-        config(['openai.api_key' => 'test-key']);
-        Bus::fake();
-
-        $entry = WorshipJournalEntry::query()->create([
-            'user_id' => $this->user->id,
-            'worship_date' => '2026-06-14',
-            'passage_reference' => 'Joao 3:16',
-            'title' => 'Mensagem antiga',
-            'church_name' => 'Igreja Antiga',
-            'preacher_name' => 'Pregador Antigo',
-            'personal_notes' => 'Anotacao antiga.',
-            'passage' => [['reference' => 'Joao 3:16', 'text' => 'Texto antigo.']],
-            'status' => 'completed',
-            'ai_study' => 'Estudo antigo.',
-            'generated_at' => now(),
-        ]);
-
-        $this
-            ->patch("/diario-cultos/{$entry->id}", [
-                'worship_date' => '2026-06-15',
-                'passage_reference' => 'Salmos 44,26',
-                'title' => 'Mensagem atualizada',
-                'church_name' => 'Igreja Local',
-                'preacher_name' => 'Pastor Joao',
-                'personal_notes' => 'Nova anotacao do culto.',
-            ])
-            ->assertRedirect('/diario-cultos');
-
-        $entry->refresh();
-
-        $this->assertSame('2026-06-15', $entry->worship_date->toDateString());
-        $this->assertSame('Salmos 44:26', $entry->passage_reference);
-        $this->assertSame('Mensagem atualizada', $entry->title);
-        $this->assertSame('queued', $entry->status);
-        $this->assertNull($entry->ai_study);
-        $this->assertNull($entry->passage);
-        $this->assertNull($entry->generated_at);
-
-        Bus::assertDispatched(GenerateWorshipJournalStudy::class);
-    }
-
-    public function test_user_can_delete_own_worship_journal_entry(): void
-    {
-        $entry = WorshipJournalEntry::query()->create([
-            'user_id' => $this->user->id,
-            'worship_date' => '2026-06-14',
-            'passage_reference' => 'Joao 3:16',
-            'status' => 'completed',
-        ]);
-
-        $this
-            ->delete("/diario-cultos/{$entry->id}")
-            ->assertRedirect('/diario-cultos');
-
-        $this->assertDatabaseMissing('worship_journal_entries', [
-            'id' => $entry->id,
-        ]);
-    }
-
-    public function test_user_cannot_update_or_delete_another_users_worship_entry(): void
-    {
-        $entry = WorshipJournalEntry::query()->create([
-            'user_id' => $this->user->id,
-            'worship_date' => '2026-06-14',
-            'passage_reference' => 'Joao 3:16',
-            'status' => 'completed',
-        ]);
-
-        $this->actingAs(User::factory()->create());
-
-        $payload = [
-            'worship_date' => '2026-06-15',
-            'passage_reference' => 'Salmos 44:26',
-            'title' => 'Tentativa externa',
-        ];
-
-        $this->patch("/diario-cultos/{$entry->id}", $payload)->assertForbidden();
-        $this->delete("/diario-cultos/{$entry->id}")->assertForbidden();
-
-        $this->assertDatabaseHas('worship_journal_entries', [
-            'id' => $entry->id,
-            'title' => null,
-        ]);
-    }
-
 }

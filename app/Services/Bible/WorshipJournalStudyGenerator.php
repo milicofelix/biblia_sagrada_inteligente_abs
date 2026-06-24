@@ -20,27 +20,40 @@ class WorshipJournalStudyGenerator
     public function generate(WorshipJournalEntry $entry): WorshipJournalEntry
     {
         $entry->loadMissing('user');
+        $entry->markProgress(15, 'iniciando', 'O agente iniciou a leitura do registro do culto.', 'running');
 
         $settings = $this->settingsResolver->forUser($entry->user);
         $translationId = $this->settingsResolver->preferredTranslationId($settings);
+
+        $entry->markProgress(30, 'localizando-passagem', 'Localizando a passagem biblica na traducao preferida.');
+
         $verses = $this->passageLookup->search($entry->passage_reference, 80, $translationId);
         $passage = $this->serializePassage($verses);
 
         $entry->forceFill([
             'verse_id' => $verses->first()?->id,
             'passage' => $passage,
-            'status' => 'running',
             'error' => null,
         ])->save();
 
+        $entry->markProgress(50, 'preparando-contexto', 'Organizando passagem, tema, igreja, pregador e anotacoes pessoais.');
+        $input = $this->input($entry, $passage);
+
+        $entry->markProgress(72, 'consultando-ia', 'Enviando o conteudo para o agente IA gerar o estudo pastoral.');
+
         $study = $this->client->text([
             'instructions' => $this->instructions(),
-            'input' => $this->input($entry, $passage),
+            'input' => $input,
         ]);
+
+        $entry->markProgress(92, 'salvando-estudo', 'Resposta recebida. Salvando resumo, contexto e aplicacoes no diario.');
 
         $entry->forceFill([
             'ai_study' => $study,
             'status' => 'completed',
+            'progress_percent' => 100,
+            'progress_step' => 'concluido',
+            'progress_message' => 'Estudo concluido e salvo no Diario de Cultos.',
             'generated_at' => now(),
         ])->save();
 

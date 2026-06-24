@@ -1,5 +1,5 @@
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import { BookOpen, CalendarDays, Check, Church, Loader2, Pencil, Save, Sparkles, Trash2, UserRound, X } from 'lucide-react';
+import { BookOpen, CalendarDays, Check, Church, Loader2, Save, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
 import type { FormEvent } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -24,6 +24,9 @@ type WorshipJournalEntry = {
     passage?: WorshipPassageVerse[];
     aiStudy?: string | null;
     status: string;
+    progressPercent?: number;
+    progressStep?: string | null;
+    progressMessage?: string | null;
     error?: string | null;
 };
 
@@ -38,126 +41,31 @@ type SharedProps = {
     flash?: { status?: string | null };
 };
 
-type WorshipPreloadState = {
-    isOpen: boolean;
-    percent: number;
-    message: string;
-    detail: string;
-};
-
-const WORSHIP_PRELOAD_STEPS = [
-    { until: 18, message: 'Salvando o culto', detail: 'Registrando data, passagem, tema e suas anotacoes pessoais.' },
-    { until: 35, message: 'Preparando a passagem', detail: 'Normalizando a referencia e buscando o texto biblico relacionado.' },
-    { until: 55, message: 'Acionando o agente IA', detail: 'Enviando o culto para a fila de estudo biblico pastoral.' },
-    { until: 75, message: 'Gerando resumo inteligente', detail: 'O agente esta organizando resumo, contexto, aplicacoes e pontos para revisao.' },
-    { until: 92, message: 'Atualizando o diario', detail: 'Aguardando o retorno do estudo para exibir o card sem precisar atualizar a pagina.' },
-    { until: 100, message: 'Estudo pronto', detail: 'Resumo recebido e Diario de Cultos atualizado.' },
-];
-
-const emptyForm = () => ({
-    worship_date: new Date().toISOString().slice(0, 10),
-    passage_reference: '',
-    title: '',
-    church_name: '',
-    preacher_name: '',
-    personal_notes: '',
-});
+const processingStatuses = ['queued', 'running'];
 
 export default function WorshipJournal({ stats, settings = {}, entries }: WorshipJournalProps) {
     const shared = usePage<SharedProps>().props;
     const [journalEntries, setJournalEntries] = useState(entries);
-    const [editingEntryId, setEditingEntryId] = useState<number | null>(null);
-    const [trackedEntryId, setTrackedEntryId] = useState<number | null>(null);
-    const [preload, setPreload] = useState<WorshipPreloadState>({
-        isOpen: false,
-        percent: 0,
-        message: 'Preparando registro',
-        detail: 'Aguarde enquanto organizamos o Diario de Cultos.',
+    const form = useForm({
+        worship_date: new Date().toISOString().slice(0, 10),
+        passage_reference: '',
+        title: '',
+        church_name: '',
+        preacher_name: '',
+        personal_notes: '',
     });
-    const form = useForm(emptyForm());
-
-    const editingEntry = useMemo(
-        () => journalEntries.find((entry) => entry.id === editingEntryId) ?? null,
-        [editingEntryId, journalEntries],
-    );
-
-    const trackedEntry = useMemo(
-        () => journalEntries.find((entry) => entry.id === trackedEntryId) ?? null,
-        [journalEntries, trackedEntryId],
-    );
 
     useEffect(() => {
         setJournalEntries(entries);
-
-        if (preload.isOpen && entries.length > 0) {
-            const newestEntry = entries[0];
-            setTrackedEntryId(newestEntry.id);
-            setPreloadProgress(62, 'Culto registrado', 'O card foi criado. Agora estamos acompanhando a geracao do estudo.');
-        }
     }, [entries]);
 
-    useEffect(() => {
-        if (!preload.isOpen || !trackedEntry) {
-            return;
-        }
-
-        if (trackedEntry.status === 'completed' && trackedEntry.aiStudy) {
-            setPreloadProgress(100, 'Estudo pronto', 'Resumo recebido e Diario de Cultos atualizado.');
-            const closeTimer = window.setTimeout(() => {
-                setPreload((current) => ({ ...current, isOpen: false }));
-                setTrackedEntryId(null);
-            }, 900);
-
-            return () => window.clearTimeout(closeTimer);
-        }
-
-        if (trackedEntry.status === 'failed') {
-            setPreloadProgress(100, 'Nao foi possivel concluir', trackedEntry.error ?? 'O agente retornou uma falha. Revise o card do culto.');
-            const closeTimer = window.setTimeout(() => {
-                setPreload((current) => ({ ...current, isOpen: false }));
-                setTrackedEntryId(null);
-            }, 1600);
-
-            return () => window.clearTimeout(closeTimer);
-        }
-
-        if (trackedEntry.status === 'running') {
-            setPreloadProgress(82, 'Gerando resumo inteligente', 'O agente esta montando resumo, contexto, aplicacoes e pontos de revisao.');
-        }
-
-        if (trackedEntry.status === 'queued') {
-            setPreloadProgress(70, 'Aguardando agente IA', 'O culto entrou na fila. Estamos verificando automaticamente o resultado.');
-        }
-    }, [preload.isOpen, trackedEntry]);
+    const activeProcessingEntry = useMemo(
+        () => journalEntries.find((entry) => processingStatuses.includes(entry.status)) ?? null,
+        [journalEntries],
+    );
 
     useEffect(() => {
-        if (!preload.isOpen || preload.percent >= 94) {
-            return;
-        }
-
-        const timer = window.setInterval(() => {
-            setPreload((current) => {
-                if (!current.isOpen || current.percent >= 94) {
-                    return current;
-                }
-
-                const nextPercent = Math.min(current.percent + 3, 94);
-                const nextStep = WORSHIP_PRELOAD_STEPS.find((step) => nextPercent <= step.until) ?? WORSHIP_PRELOAD_STEPS[WORSHIP_PRELOAD_STEPS.length - 1];
-
-                return {
-                    ...current,
-                    percent: nextPercent,
-                    message: nextStep.message,
-                    detail: nextStep.detail,
-                };
-            });
-        }, 700);
-
-        return () => window.clearInterval(timer);
-    }, [preload.isOpen, preload.percent]);
-
-    useEffect(() => {
-        const pending = journalEntries.filter((entry) => ['queued', 'running'].includes(entry.status));
+        const pending = journalEntries.filter((entry) => processingStatuses.includes(entry.status));
 
         if (pending.length === 0) {
             return;
@@ -181,107 +89,24 @@ export default function WorshipJournal({ stats, settings = {}, entries }: Worshi
             );
 
             setJournalEntries((current) => current.map((entry) => updates.find((update) => update.id === entry.id) ?? entry));
-        }, 2500);
+        }, 1600);
 
         return () => window.clearTimeout(timer);
     }, [journalEntries]);
 
-    function setPreloadProgress(percent: number, message: string, detail: string) {
-        setPreload((current) => {
-            if (percent < current.percent) {
-                return current;
-            }
-
-            return {
-                ...current,
-                isOpen: true,
-                percent,
-                message,
-                detail,
-            };
-        });
-    }
-
     function submit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-
-        if (editingEntryId) {
-            form.patch(`/diario-cultos/${editingEntryId}`, {
-                preserveScroll: true,
-                onSuccess: () => cancelEdit(),
-            });
-
-            return;
-        }
-
-        setTrackedEntryId(null);
-        setPreload({
-            isOpen: true,
-            percent: 8,
-            message: 'Salvando o culto',
-            detail: 'Registrando data, passagem, tema e suas anotacoes pessoais.',
-        });
-
         form.post('/diario-cultos', {
             preserveScroll: true,
-            preserveState: false,
-            onStart: () => setPreloadProgress(18, 'Salvando o culto', 'Enviando o formulario para o Diario de Cultos.'),
-            onSuccess: () => {
-                setPreloadProgress(58, 'Culto registrado', 'O agente IA foi acionado. Vamos acompanhar a geracao automaticamente.');
-                form.reset('passage_reference', 'title', 'church_name', 'preacher_name', 'personal_notes');
-            },
-            onError: () => {
-                setPreload({
-                    isOpen: true,
-                    percent: 100,
-                    message: 'Revise o formulario',
-                    detail: 'Algum campo precisa de ajuste antes de registrar o culto.',
-                });
-                window.setTimeout(() => setPreload((current) => ({ ...current, isOpen: false })), 1400);
-            },
-            onFinish: () => setPreloadProgress(50, 'Processando retorno', 'Atualizando o Diario de Cultos sem exigir refresh manual.'),
-        });
-    }
-
-    function startEdit(entry: WorshipJournalEntry) {
-        setEditingEntryId(entry.id);
-        form.clearErrors();
-        form.setData('worship_date', entry.worshipDate);
-        form.setData('passage_reference', entry.passageReference);
-        form.setData('title', entry.title ?? '');
-        form.setData('church_name', entry.churchName ?? '');
-        form.setData('preacher_name', entry.preacherName ?? '');
-        form.setData('personal_notes', entry.personalNotes ?? '');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function cancelEdit() {
-        setEditingEntryId(null);
-        form.clearErrors();
-        form.setData('worship_date', new Date().toISOString().slice(0, 10));
-        form.reset('passage_reference', 'title', 'church_name', 'preacher_name', 'personal_notes');
-    }
-
-    function deleteEntry(entry: WorshipJournalEntry) {
-        const title = entry.title || entry.passageReference;
-
-        if (!window.confirm(`Excluir o registro "${title}" do Diario de Cultos?`)) {
-            return;
-        }
-
-        router.delete(`/diario-cultos/${entry.id}`, {
-            preserveScroll: true,
-            onSuccess: () => {
-                setJournalEntries((current) => current.filter((item) => item.id !== entry.id));
-
-                if (editingEntryId === entry.id) {
-                    cancelEdit();
-                }
-            },
+            onSuccess: () => form.reset('passage_reference', 'title', 'church_name', 'preacher_name', 'personal_notes'),
         });
     }
 
     function navigate(label: string) {
+        if (activeProcessingEntry) {
+            return;
+        }
+
         if (label === 'Diario de Cultos') {
             return;
         }
@@ -299,6 +124,8 @@ export default function WorshipJournal({ stats, settings = {}, entries }: Worshi
         <>
             <Head title="Diario de Cultos" />
             <main className={`settings-shell worship-shell ${settings.theme === 'night' ? 'theme-night' : ''}`}>
+                {activeProcessingEntry && <WorshipProcessingOverlay entry={activeProcessingEntry} />}
+
                 <DashboardSidebar stats={stats} activeLabel="Diario de Cultos" onNavigate={navigate} />
 
                 <section className="settings-main">
@@ -308,24 +135,13 @@ export default function WorshipJournal({ stats, settings = {}, entries }: Worshi
                             <h1>Diario de Cultos</h1>
                             <p>{shared.auth?.user?.name ?? 'Leitor'}, registre a passagem pregada e preserve o estudo gerado pela IA.</p>
                         </div>
-                        <button type="button" className="settings-back" onClick={() => router.get('/')} disabled={preload.isOpen || form.processing}>
+                        <button type="button" className="settings-back" disabled={Boolean(activeProcessingEntry)} onClick={() => router.get('/')}>
                             <BookOpen className="h-4 w-4" />
                             Voltar para a Biblia
                         </button>
                     </header>
 
-                    <form onSubmit={submit} className={`worship-form ${editingEntry ? 'is-editing' : ''}`} aria-busy={preload.isOpen || form.processing}>
-                        {editingEntry && (
-                            <div className="worship-edit-banner">
-                                <Pencil className="h-4 w-4" />
-                                <span>Editando: {editingEntry.title || editingEntry.passageReference}</span>
-                                <button type="button" onClick={cancelEdit}>
-                                    <X className="h-4 w-4" />
-                                    Cancelar edicao
-                                </button>
-                            </div>
-                        )}
-
+                    <form onSubmit={submit} className="worship-form" aria-busy={form.processing || Boolean(activeProcessingEntry)}>
                         <div className="worship-form-grid">
                             <label className="settings-field">
                                 <span>Data do culto</span>
@@ -333,6 +149,7 @@ export default function WorshipJournal({ stats, settings = {}, entries }: Worshi
                                     type="date"
                                     value={form.data.worship_date}
                                     onChange={(event) => form.setData('worship_date', event.target.value)}
+                                    disabled={form.processing || Boolean(activeProcessingEntry)}
                                 />
                                 {form.errors.worship_date && <small>{form.errors.worship_date}</small>}
                             </label>
@@ -343,6 +160,7 @@ export default function WorshipJournal({ stats, settings = {}, entries }: Worshi
                                     value={form.data.passage_reference}
                                     onChange={(event) => form.setData('passage_reference', event.target.value)}
                                     placeholder="Salmos 44,26"
+                                    disabled={form.processing || Boolean(activeProcessingEntry)}
                                 />
                                 {form.errors.passage_reference && <small>{form.errors.passage_reference}</small>}
                             </label>
@@ -353,6 +171,7 @@ export default function WorshipJournal({ stats, settings = {}, entries }: Worshi
                                     value={form.data.title}
                                     onChange={(event) => form.setData('title', event.target.value)}
                                     placeholder="Socorro e restauracao"
+                                    disabled={form.processing || Boolean(activeProcessingEntry)}
                                 />
                                 {form.errors.title && <small>{form.errors.title}</small>}
                             </label>
@@ -363,6 +182,7 @@ export default function WorshipJournal({ stats, settings = {}, entries }: Worshi
                                     value={form.data.church_name}
                                     onChange={(event) => form.setData('church_name', event.target.value)}
                                     placeholder="Nome da igreja"
+                                    disabled={form.processing || Boolean(activeProcessingEntry)}
                                 />
                                 {form.errors.church_name && <small>{form.errors.church_name}</small>}
                             </label>
@@ -373,6 +193,7 @@ export default function WorshipJournal({ stats, settings = {}, entries }: Worshi
                                     value={form.data.preacher_name}
                                     onChange={(event) => form.setData('preacher_name', event.target.value)}
                                     placeholder="Nome do pregador"
+                                    disabled={form.processing || Boolean(activeProcessingEntry)}
                                 />
                                 {form.errors.preacher_name && <small>{form.errors.preacher_name}</small>}
                             </label>
@@ -385,6 +206,7 @@ export default function WorshipJournal({ stats, settings = {}, entries }: Worshi
                                 onChange={(event) => form.setData('personal_notes', event.target.value)}
                                 rows={5}
                                 placeholder="Frases, pontos principais, aplicacoes citadas no culto..."
+                                disabled={form.processing || Boolean(activeProcessingEntry)}
                             />
                             {form.errors.personal_notes && <small>{form.errors.personal_notes}</small>}
                         </label>
@@ -396,46 +218,16 @@ export default function WorshipJournal({ stats, settings = {}, entries }: Worshi
                                     Culto registrado. O agente esta preparando o estudo.
                                 </p>
                             )}
-                            {shared.flash?.status === 'worship-journal-updated' && (
-                                <p>
-                                    <Check className="h-4 w-4" />
-                                    Registro atualizado com sucesso.
-                                </p>
-                            )}
-                            {shared.flash?.status === 'worship-journal-deleted' && (
-                                <p>
-                                    <Check className="h-4 w-4" />
-                                    Registro excluido com sucesso.
-                                </p>
-                            )}
-                            <div className="worship-form-actions">
-                                {editingEntry && (
-                                    <button type="button" className="worship-secondary-action" onClick={cancelEdit}>
-                                        <X className="h-4 w-4" />
-                                        Cancelar
-                                    </button>
-                                )}
-                                <button type="submit" disabled={preload.isOpen || form.processing}>
-                                    <Save className="h-4 w-4" />
-                                    {form.processing ? 'Salvando...' : editingEntry ? 'Salvar alteracoes' : 'Registrar culto'}
-                                </button>
-                            </div>
+                            <button type="submit" disabled={form.processing || Boolean(activeProcessingEntry)}>
+                                <Save className="h-4 w-4" />
+                                {form.processing ? 'Salvando...' : activeProcessingEntry ? 'Processando estudo...' : 'Registrar culto'}
+                            </button>
                         </footer>
                     </form>
 
-                    {preload.isOpen && <WorshipRegisterPreload progress={preload} />}
-
                     <section className="worship-list">
                         {journalEntries.length > 0 ? (
-                            journalEntries.map((entry) => (
-                                <WorshipEntryCard
-                                    key={entry.id}
-                                    entry={entry}
-                                    isEditing={editingEntryId === entry.id}
-                                    onEdit={startEdit}
-                                    onDelete={deleteEntry}
-                                />
-                            ))
+                            journalEntries.map((entry) => <WorshipEntryCard key={entry.id} entry={entry} />)
                         ) : (
                             <div className="worship-empty">
                                 <Church className="h-8 w-8" />
@@ -450,50 +242,63 @@ export default function WorshipJournal({ stats, settings = {}, entries }: Worshi
     );
 }
 
-
-function WorshipRegisterPreload({ progress }: { progress: WorshipPreloadState }) {
-    const safePercent = Math.min(Math.max(progress.percent, 0), 100);
+function WorshipProcessingOverlay({ entry }: { entry: WorshipJournalEntry }) {
+    const percent = Math.max(0, Math.min(100, entry.progressPercent ?? (entry.status === 'running' ? 45 : 10)));
+    const message = entry.progressMessage ?? 'Aguardando o backend atualizar o andamento do estudo.';
+    const step = entry.progressStep ?? (entry.status === 'queued' ? 'na-fila' : 'processando');
 
     return (
-        <div className="worship-preload-overlay" role="status" aria-live="polite" aria-label="Registro de culto em andamento">
-            <section className="worship-preload-card">
-                <div className="worship-preload-icon">
-                    {safePercent >= 100 ? <Check className="h-6 w-6" /> : <Sparkles className="h-6 w-6" />}
+        <div className="worship-processing-overlay" role="status" aria-live="polite">
+            <div className="worship-processing-card">
+                <div className="worship-processing-icon">
+                    <Sparkles className="h-6 w-6" />
                 </div>
-                <div className="worship-preload-copy">
-                    <span>Registro em andamento</span>
-                    <h2>{progress.message}</h2>
-                    <p>{progress.detail}</p>
+
+                <span>Diario de Cultos</span>
+                <h2>Gerando estudo com IA</h2>
+                <p>{message}</p>
+
+                <div className="worship-processing-meta">
+                    <strong>{percent}%</strong>
+                    <small>{step.replaceAll('-', ' ')}</small>
                 </div>
-                <div className="worship-preload-percent">{safePercent}%</div>
-                <div className="worship-preload-bar" aria-hidden="true">
-                    <span style={{ width: `${safePercent}%` }} />
+
+                <div className="worship-progress-track" aria-label={`Progresso ${percent}%`}>
+                    <div className="worship-progress-bar" style={{ width: `${percent}%` }} />
                 </div>
-                <ol className="worship-preload-steps">
-                    {WORSHIP_PRELOAD_STEPS.slice(0, 5).map((step) => (
-                        <li key={step.message} className={safePercent >= step.until - 10 ? 'active' : ''}>
-                            {step.message}
+
+                <ul>
+                    {progressSteps(percent).map((item) => (
+                        <li key={item.label} className={item.done ? 'done' : item.active ? 'active' : ''}>
+                            {item.done ? <ShieldCheck className="h-4 w-4" /> : <Loader2 className="h-4 w-4" />}
+                            {item.label}
                         </li>
                     ))}
-                </ol>
-            </section>
+                </ul>
+
+                <small>Nao feche nem navegue nesta tela ate o estudo ser concluido.</small>
+            </div>
         </div>
     );
 }
 
-function WorshipEntryCard({
-    entry,
-    isEditing,
-    onEdit,
-    onDelete,
-}: {
-    entry: WorshipJournalEntry;
-    isEditing: boolean;
-    onEdit: (entry: WorshipJournalEntry) => void;
-    onDelete: (entry: WorshipJournalEntry) => void;
-}) {
+function progressSteps(percent: number) {
+    return [
+        { label: 'Registro salvo', threshold: 8 },
+        { label: 'Passagem localizada', threshold: 30 },
+        { label: 'Contexto organizado', threshold: 50 },
+        { label: 'Agente IA consultado', threshold: 72 },
+        { label: 'Estudo salvo no diario', threshold: 100 },
+    ].map((item, index, all) => ({
+        label: item.label,
+        done: percent >= item.threshold,
+        active: percent < item.threshold && (index === 0 || percent >= all[index - 1].threshold),
+    }));
+}
+
+function WorshipEntryCard({ entry }: { entry: WorshipJournalEntry }) {
     return (
-        <article className={`worship-entry-card ${isEditing ? 'is-editing' : ''}`}>
+        <article className="worship-entry-card">
             <header>
                 <div>
                     <span>
@@ -503,19 +308,7 @@ function WorshipEntryCard({
                     <h2>{entry.title || entry.passageReference}</h2>
                     <p>{entry.passageReference}</p>
                 </div>
-                <div className="worship-card-side">
-                    <StatusBadge status={entry.status} />
-                    <div className="worship-card-actions" aria-label={`Acoes do registro ${entry.title || entry.passageReference}`}>
-                        <button type="button" onClick={() => onEdit(entry)} disabled={isEditing}>
-                            <Pencil className="h-4 w-4" />
-                            Editar
-                        </button>
-                        <button type="button" className="danger" onClick={() => onDelete(entry)}>
-                            <Trash2 className="h-4 w-4" />
-                            Excluir
-                        </button>
-                    </div>
-                </div>
+                <StatusBadge status={entry.status} />
             </header>
 
             <div className="worship-entry-meta">
@@ -549,7 +342,7 @@ function WorshipEntryCard({
             ) : (
                 <div className="worship-loading">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    O agente esta interpretando esta mensagem.
+                    {entry.progressMessage ?? 'O agente esta interpretando esta mensagem.'}
                 </div>
             )}
         </article>

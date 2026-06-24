@@ -27,6 +27,9 @@ class GenerateWorshipJournalStudy implements ShouldQueue
         } catch (Throwable $throwable) {
             $entry->forceFill([
                 'status' => 'failed',
+                'progress_percent' => 100,
+                'progress_step' => 'falhou',
+                'progress_message' => 'O processamento foi interrompido antes de concluir o estudo.',
                 'error' => $throwable->getMessage(),
             ])->save();
         }

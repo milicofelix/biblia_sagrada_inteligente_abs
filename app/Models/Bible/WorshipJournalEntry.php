@@ -23,6 +23,9 @@ class WorshipJournalEntry extends Model
         'passage',
         'ai_study',
         'status',
+        'progress_percent',
+        'progress_step',
+        'progress_message',
         'error',
         'generated_at',
     ];
@@ -33,7 +36,21 @@ class WorshipJournalEntry extends Model
             'worship_date' => 'date',
             'passage' => 'array',
             'generated_at' => 'datetime',
+            'progress_percent' => 'integer',
         ];
+    }
+
+    /**
+     * Atualiza o progresso real do processamento para o frontend acompanhar.
+     */
+    public function markProgress(int $percent, string $step, string $message, ?string $status = null): void
+    {
+        $this->forceFill([
+            'status' => $status ?? $this->status,
+            'progress_percent' => max(0, min(100, $percent)),
+            'progress_step' => $step,
+            'progress_message' => $message,
+        ])->save();
     }
 
     public function user(): BelongsTo
